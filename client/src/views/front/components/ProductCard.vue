@@ -28,19 +28,20 @@
   </el-card>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { useCartStore } from '../../../stores/cart'
 import { useUserStore } from '../../../stores/user'
 import { ElMessage } from 'element-plus'
+import type { Product } from '../../../types/product'
 
 const defaultImg = 'https://picsum.photos/seed/default/400/400'
-const props = defineProps({ product: { type: Object, required: true } })
+const props = defineProps<{ product: Product }>()
 const router = useRouter()
 const cartStore = useCartStore()
 const userStore = useUserStore()
 
-function handleAdd() {
+function handleAdd(): void {
   if (!userStore.isLoggedIn) {
     ElMessage.warning('请先登录')
     router.push('/login')

@@ -131,26 +131,42 @@
   </el-card>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import request from '../../utils/request'
 import { useUserStore } from '../../stores/user'
 import { ElMessage } from 'element-plus'
+import type { Product, Category } from '../../types/product'
+import type { PageResult } from '../../types/api'
 
 const userStore = useUserStore()
-const list = ref([])
-const categories = ref([])
-const total = ref(0)
-const page = ref(1)
-const keyword = ref('')
-const loading = ref(false)
-const dialogVisible = ref(false)
-const isEdit = ref(false)
-const editId = ref(null)
-const saving = ref(false)
+const list = ref<Product[]>([])
+const categories = ref<Category[]>([])
+const total = ref<number>(0)
+const page = ref<number>(1)
+const keyword = ref<string>('')
+const loading = ref<boolean>(false)
+const dialogVisible = ref<boolean>(false)
+const isEdit = ref<boolean>(false)
+const editId = ref<number | null>(null)
+const saving = ref<boolean>(false)
 const formRef = ref()
 
-const form = reactive({
+interface ProductForm {
+  name: string
+  price: number
+  original_price: number
+  stock: number
+  category_id: number | null
+  description: string
+  cover: string
+  images: string[]
+  status: number
+  is_hot: number
+  is_new: number
+}
+
+const form = reactive<ProductForm>({
   name: '', price: 0, original_price: 0, stock: 0,
   category_id: null, description: '', cover: '',
   images: [], status: 1, is_hot: 0, is_new: 0
@@ -161,17 +177,17 @@ const formRules = {
   price: [{ required: true, message: '请输入价格', trigger: 'blur' }]
 }
 
-async function load(p) {
+async function load(p?: number): Promise<void> {
   if (p) page.value = p
   loading.value = true
-  const res = await request.get('/products', {
+  const res = await request.get<PageResult<Product>>('/products', {
     params: { page: page.value, pageSize: 10, keyword: keyword.value, _admin: 1, status: '' }
   })
   if (res.code === 200) { list.value = res.data.list; total.value = res.data.total }
   loading.value = false
 }
 
-function openDialog(row) {
+function openDialog(row?: Product): void {
   if (row) {
     isEdit.value = true
     editId.value = row.id
@@ -191,20 +207,20 @@ function openDialog(row) {
   dialogVisible.value = true
 }
 
-function handleUploadSuccess(res) {
+function handleUploadSuccess(res: { code: number; data: { url: string }; message?: string }): void {
   if (res.code === 200) {
     form.cover = res.data.url
     ElMessage.success('上传成功')
   }
 }
 
-async function handleSave() {
+async function handleSave(): Promise<void> {
   await formRef.value.validate()
   saving.value = true
   if (!form.cover && form.images.length) form.cover = form.images[0]
   const fn = isEdit.value
-    ? request.put('/products/' + editId.value, form)
-    : request.post('/products', form)
+    ? request.put<null>('/products/' + editId.value, form)
+    : request.post<null>('/products', form)
   const res = await fn
   if (res.code === 200) {
     ElMessage.success(isEdit.value ? '更新成功' : '添加成功')
@@ -216,14 +232,14 @@ async function handleSave() {
   saving.value = false
 }
 
-async function handleDelete(id) {
-  const res = await request.delete('/products/' + id)
+async function handleDelete(id: number): Promise<void> {
+  const res = await request.delete<null>('/products/' + id)
   if (res.code === 200) { ElMessage.success('已删除'); load() }
   else ElMessage.error(res.message || '删除失败')
 }
 
 onMounted(async () => {
-  const catRes = await request.get('/categories/all')
+  const catRes = await request.get<Category[]>('/categories/all')
   if (catRes.code === 200) categories.value = catRes.data
   load(1)
 })

@@ -40,7 +40,7 @@
     </div>
 
     <!-- 分页 -->
-    <div v-if="total > filters.pageSize" style="display: flex; justify-content: center; margin-top: 24px">
+    <div v-if="total > (filters.pageSize ?? 0)" style="display: flex; justify-content: center; margin-top: 24px">
       <el-pagination
         v-model:current-page="filters.page"
         :page-size="filters.pageSize"
@@ -52,32 +52,34 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import request from '../../utils/request'
 import ProductCard from './components/ProductCard.vue'
+import type { Category, Product, ProductQueryParams } from '../../types/product'
+import type { PageResult } from '../../types/api'
 
 const route = useRoute()
-const products = ref([])
-const categories = ref([])
-const total = ref(0)
-const loading = ref(false)
+const products = ref<Product[]>([])
+const categories = ref<Category[]>([])
+const total = ref<number>(0)
+const loading = ref<boolean>(false)
 
-const filters = reactive({
-  keyword: route.query.keyword || '',
-  category_id: route.query.category ? +route.query.category : '',
-  sort: route.query.sort || 'newest',
+const filters = reactive<ProductQueryParams>({
+  keyword: (route.query.keyword as string) || '',
+  category_id: route.query.category ? Number(route.query.category) : '',
+  sort: (route.query.sort as string) || 'newest',
   page: 1,
   pageSize: 12
 })
 
-async function load(page) {
+async function load(page?: number): Promise<void> {
   if (page) filters.page = page
   loading.value = true
-  const params = { ...filters }
+  const params: Record<string, unknown> = { ...filters }
   Object.keys(params).forEach(k => { if (params[k] === '' || params[k] === null) delete params[k] })
-  const res = await request.get('/products', { params })
+  const res = await request.get<PageResult<Product>>('/products', { params })
   if (res.code === 200) {
     products.value = res.data.list
     total.value = res.data.total
@@ -86,13 +88,13 @@ async function load(page) {
 }
 
 watch(() => route.query, (q) => {
-  filters.keyword = q.keyword || ''
-  filters.category_id = q.category ? +q.category : ''
+  filters.keyword = (q.keyword as string) || ''
+  filters.category_id = q.category ? Number(q.category) : ''
   load(1)
 })
 
 onMounted(async () => {
-  const catRes = await request.get('/categories')
+  const catRes = await request.get<Category[]>('/categories')
   if (catRes.code === 200) categories.value = catRes.data
   load(1)
 })

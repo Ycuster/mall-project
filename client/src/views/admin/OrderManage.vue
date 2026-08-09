@@ -92,45 +92,55 @@
   </el-card>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import request from '../../utils/request'
 import { ElMessage } from 'element-plus'
+import type { Order, OrderStatus } from '../../types/order'
+import type { PageResult } from '../../types/api'
 
-const statusMap = { pending: '待付款', paid: '已付款', shipped: '已发货', completed: '已完成', cancelled: '已取消' }
-const statusType = { pending: 'warning', paid: 'primary', shipped: 'success', completed: '', cancelled: 'info' }
+const statusMap: Record<OrderStatus, string> = {
+  pending: '待付款', paid: '已付款', shipped: '已发货', completed: '已完成', cancelled: '已取消'
+}
+const statusType: Record<OrderStatus, string> = {
+  pending: 'warning', paid: 'primary', shipped: 'success', completed: '', cancelled: 'info'
+}
 
-const list = ref([])
-const total = ref(0)
-const page = ref(1)
-const loading = ref(false)
-const statusFilter = ref('')
-const detailVisible = ref(false)
-const detail = ref(null)
+const list = ref<Order[]>([])
+const total = ref<number>(0)
+const page = ref<number>(1)
+const loading = ref<boolean>(false)
+const statusFilter = ref<string>('')
+const detailVisible = ref<boolean>(false)
+const detail = ref<Order | null>(null)
 
-function getNextStatuses(current) {
-  const map = { pending: ['paid', 'cancelled'], paid: ['shipped', 'cancelled'], shipped: ['completed'] }
+function getNextStatuses(current: OrderStatus): OrderStatus[] {
+  const map: Record<string, OrderStatus[]> = {
+    pending: ['paid', 'cancelled'],
+    paid: ['shipped', 'cancelled'],
+    shipped: ['completed']
+  }
   return map[current] || []
 }
 
-async function load(p) {
+async function load(p?: number): Promise<void> {
   if (p) page.value = p
   loading.value = true
-  const params = { page: page.value, pageSize: 10 }
+  const params: Record<string, unknown> = { page: page.value, pageSize: 10 }
   if (statusFilter.value) params.status = statusFilter.value
-  const res = await request.get('/orders', { params })
+  const res = await request.get<PageResult<Order>>('/orders', { params })
   if (res.code === 200) { list.value = res.data.list; total.value = res.data.total }
   loading.value = false
 }
 
-async function updateStatus(id, status) {
-  const res = await request.put(`/orders/${id}/status`, { status })
+async function updateStatus(id: number, status: OrderStatus): Promise<void> {
+  const res = await request.put<null>(`/orders/${id}/status`, { status })
   if (res.code === 200) { ElMessage.success('状态已更新'); load() }
   else ElMessage.error(res.message || '操作失败')
 }
 
-async function viewDetail(row) {
-  const res = await request.get('/orders/' + row.id)
+async function viewDetail(row: Order): Promise<void> {
+  const res = await request.get<Order>('/orders/' + row.id)
   if (res.code === 200) { detail.value = res.data; detailVisible.value = true }
 }
 

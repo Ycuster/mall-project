@@ -71,20 +71,22 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import request from '../../utils/request'
 import ProductCard from './components/ProductCard.vue'
+import type { Category, Product } from '../../types/product'
+import type { PageResult } from '../../types/api'
 
-const categories = ref([])
-const hotProducts = ref([])
-const newProducts = ref([])
+const categories = ref<Category[]>([])
+const hotProducts = ref<Product[]>([])
+const newProducts = ref<Product[]>([])
 
 onMounted(async () => {
   const [catRes, hotRes, newRes] = await Promise.all([
-    request.get('/categories'),
-    request.get('/products?sort=sales&pageSize=8'),
-    request.get('/products?sort=newest&pageSize=8')
+    request.get<Category[]>('/categories'),
+    request.get<PageResult<Product>>('/products?sort=sales&pageSize=8'),
+    request.get<PageResult<Product>>('/products?sort=newest&pageSize=8')
   ])
   if (catRes.code === 200) categories.value = catRes.data
   if (hotRes.code === 200) hotProducts.value = hotRes.data.list

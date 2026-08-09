@@ -85,7 +85,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
@@ -94,15 +94,15 @@ import { useCartStore } from '../stores/cart'
 const router = useRouter()
 const userStore = useUserStore()
 const cartStore = useCartStore()
-const keyword = ref('')
+const keyword = ref<string>('')
 
-function doSearch() {
+function doSearch(): void {
   if (keyword.value.trim()) {
     router.push({ path: '/products', query: { keyword: keyword.value.trim() } })
   }
 }
 
-function handleCommand(cmd) {
+function handleCommand(cmd: string): void {
   if (cmd === 'logout') {
     userStore.logout()
     cartStore.items = []

@@ -85,7 +85,7 @@
   </el-container>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
@@ -93,9 +93,9 @@ import { useUserStore } from '../stores/user'
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
-const isCollapse = ref(false)
+const isCollapse = ref<boolean>(false)
 
-const titleMap = {
+const titleMap: Record<string, string> = {
   '/admin/dashboard': '数据看板',
   '/admin/products': '商品管理',
   '/admin/categories': '分类管理',
@@ -103,9 +103,9 @@ const titleMap = {
   '/admin/users': '用户管理'
 }
 
-const currentTitle = computed(() => titleMap[route.path] || '')
+const currentTitle = computed<string>(() => titleMap[route.path] || '')
 
-function handleCommand(cmd) {
+function handleCommand(cmd: string): void {
   if (cmd === 'logout') {
     userStore.logout()
     router.push('/login')

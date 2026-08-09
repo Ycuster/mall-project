@@ -68,32 +68,35 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import request from '../../utils/request'
 import { useCartStore } from '../../stores/cart'
 import { useUserStore } from '../../stores/user'
 import { ElMessage } from 'element-plus'
+import type { Product } from '../../types/product'
 
 const defaultImg = 'https://picsum.photos/seed/default/400/400'
 const route = useRoute()
 const cartStore = useCartStore()
 const userStore = useUserStore()
 
-const product = ref(null)
-const loading = ref(true)
-const qty = ref(1)
+const product = ref<Product | null>(null)
+const loading = ref<boolean>(true)
+const qty = ref<number>(1)
 
 onMounted(async () => {
-  const res = await request.get('/products/' + route.params.id)
+  const res = await request.get<Product>('/products/' + route.params.id)
   if (res.code === 200) product.value = res.data
   loading.value = false
 })
 
-function handleAdd() {
+function handleAdd(): void {
   if (!userStore.isLoggedIn) { ElMessage.warning('请先登录'); return }
-  cartStore.add(product.value.id, qty.value)
+  if (product.value) {
+    cartStore.add(product.value.id, qty.value)
+  }
 }
 </script>
 

@@ -32,7 +32,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '../../stores/user'
@@ -45,7 +45,7 @@ const route = useRoute()
 const userStore = useUserStore()
 const cartStore = useCartStore()
 const formRef = ref()
-const loading = ref(false)
+const loading = ref<boolean>(false)
 
 const form = reactive({ username: '', password: '' })
 const rules = {
@@ -53,15 +53,14 @@ const rules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
-async function handleLogin() {
+async function handleLogin(): Promise<void> {
   await formRef.value.validate()
   loading.value = true
-  const res = await request.post('/auth/login', form)
+  const res = await userStore.login(form)
   if (res.code === 200) {
-    userStore.setAuth(res.data.token, res.data.user)
     ElMessage.success('登录成功')
     await cartStore.fetch()
-    const redirect = route.query.redirect || (res.data.user.role === 'admin' ? '/admin' : '/')
+    const redirect = (route.query.redirect as string) || (res.data.user.role === 'admin' ? '/admin' : '/')
     router.push(redirect)
   } else {
     ElMessage.error(res.message || '登录失败')

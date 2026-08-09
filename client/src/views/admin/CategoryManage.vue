@@ -47,27 +47,36 @@
   </el-card>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import request from '../../utils/request'
 import { ElMessage } from 'element-plus'
+import type { Category } from '../../types/product'
 
-const list = ref([])
-const loading = ref(false)
-const dialogVisible = ref(false)
-const isEdit = ref(false)
-const editId = ref(null)
-const saving = ref(false)
-const form = reactive({ name: '', icon: '', sort_order: 0, status: 1 })
+const list = ref<Category[]>([])
+const loading = ref<boolean>(false)
+const dialogVisible = ref<boolean>(false)
+const isEdit = ref<boolean>(false)
+const editId = ref<number | null>(null)
+const saving = ref<boolean>(false)
 
-async function load() {
+interface CategoryForm {
+  name: string
+  icon: string
+  sort_order: number
+  status: number
+}
+
+const form = reactive<CategoryForm>({ name: '', icon: '', sort_order: 0, status: 1 })
+
+async function load(): Promise<void> {
   loading.value = true
-  const res = await request.get('/categories/all')
+  const res = await request.get<Category[]>('/categories/all')
   if (res.code === 200) list.value = res.data
   loading.value = false
 }
 
-function openDialog(row) {
+function openDialog(row?: Category): void {
   if (row) {
     isEdit.value = true; editId.value = row.id
     Object.assign(form, row)
@@ -78,20 +87,20 @@ function openDialog(row) {
   dialogVisible.value = true
 }
 
-async function handleSave() {
-  if (!form.name) return ElMessage.warning('请输入名称')
+async function handleSave(): Promise<void> {
+  if (!form.name) { ElMessage.warning('请输入名称'); return }
   saving.value = true
   const fn = isEdit.value
-    ? request.put('/categories/' + editId.value, form)
-    : request.post('/categories', form)
+    ? request.put<null>('/categories/' + editId.value, form)
+    : request.post<null>('/categories', form)
   const res = await fn
   if (res.code === 200) { ElMessage.success('保存成功'); dialogVisible.value = false; load() }
   else ElMessage.error(res.message || '操作失败')
   saving.value = false
 }
 
-async function handleDelete(id) {
-  const res = await request.delete('/categories/' + id)
+async function handleDelete(id: number): Promise<void> {
+  const res = await request.delete<null>('/categories/' + id)
   if (res.code === 200) { ElMessage.success('已删除'); load() }
   else ElMessage.error(res.message || '删除失败')
 }

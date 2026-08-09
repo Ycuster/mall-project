@@ -31,11 +31,12 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { reactive, onMounted } from 'vue'
 import { useUserStore } from '../../stores/user'
 import request from '../../utils/request'
 import { ElMessage } from 'element-plus'
+import type { User } from '../../types/user'
 
 const userStore = useUserStore()
 const form = reactive({ nickname: '', email: '', phone: '' })
@@ -49,8 +50,8 @@ onMounted(async () => {
   }
 })
 
-async function handleSave() {
-  const res = await request.put('/auth/profile', form)
+async function handleSave(): Promise<void> {
+  const res = await request.put<User>('/auth/profile', form)
   if (res.code === 200) {
     ElMessage.success('保存成功')
     await userStore.fetchProfile()

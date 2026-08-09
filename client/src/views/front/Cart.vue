@@ -79,7 +79,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { onMounted } from 'vue'
 import { useCartStore } from '../../stores/cart'
 import { ElMessage } from 'element-plus'
@@ -89,12 +89,12 @@ const cartStore = useCartStore()
 
 onMounted(() => cartStore.fetch())
 
-function handleQtyChange(id, qty) {
+function handleQtyChange(id: number, qty: number): void {
   if (qty < 1) return
   cartStore.updateQuantity(id, qty)
 }
 
-async function handleClear() {
+async function handleClear(): Promise<void> {
   await cartStore.clear()
   ElMessage.success('购物车已清空')
 }

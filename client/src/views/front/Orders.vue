@@ -45,30 +45,36 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import request from '../../utils/request'
 import { ElMessage } from 'element-plus'
+import type { Order, OrderStatus } from '../../types/order'
+import type { PageResult } from '../../types/api'
 
-const statusMap = { pending: '待付款', paid: '已付款', shipped: '已发货', completed: '已完成', cancelled: '已取消' }
-const statusType = { pending: 'warning', paid: 'primary', shipped: 'success', completed: '', cancelled: 'info' }
+const statusMap: Record<OrderStatus, string> = {
+  pending: '待付款', paid: '已付款', shipped: '已发货', completed: '已完成', cancelled: '已取消'
+}
+const statusType: Record<OrderStatus, string> = {
+  pending: 'warning', paid: 'primary', shipped: 'success', completed: '', cancelled: 'info'
+}
 
-const orders = ref([])
-const loading = ref(true)
-const page = ref(1)
+const orders = ref<Order[]>([])
+const loading = ref<boolean>(true)
+const page = ref<number>(1)
 const pageSize = 10
-const total = ref(0)
+const total = ref<number>(0)
 
-async function load(p) {
+async function load(p?: number): Promise<void> {
   if (p) page.value = p
   loading.value = true
-  const res = await request.get('/orders', { params: { page: page.value, pageSize } })
+  const res = await request.get<PageResult<Order>>('/orders', { params: { page: page.value, pageSize } })
   if (res.code === 200) { orders.value = res.data.list; total.value = res.data.total }
   loading.value = false
 }
 
-async function cancelOrder(id) {
-  const res = await request.put(`/orders/${id}/status`, { status: 'cancelled' })
+async function cancelOrder(id: number): Promise<void> {
+  const res = await request.put<null>(`/orders/${id}/status`, { status: 'cancelled' })
   if (res.code === 200) { ElMessage.success('订单已取消'); load() }
   else ElMessage.error(res.message || '操作失败')
 }

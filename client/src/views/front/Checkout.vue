@@ -43,7 +43,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '../../stores/cart'
@@ -53,7 +53,7 @@ import { ElMessage } from 'element-plus'
 const router = useRouter()
 const cartStore = useCartStore()
 const formRef = ref()
-const submitting = ref(false)
+const submitting = ref<boolean>(false)
 
 const form = reactive({
   receiver_name: '',
@@ -68,10 +68,10 @@ const rules = {
   receiver_address: [{ required: true, message: '请输入地址', trigger: 'blur' }]
 }
 
-async function handleSubmit() {
+async function handleSubmit(): Promise<void> {
   await formRef.value.validate()
   submitting.value = true
-  const res = await request.post('/orders', {
+  const res = await request.post<null>('/orders', {
     items: cartStore.items.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
     ...form
   })

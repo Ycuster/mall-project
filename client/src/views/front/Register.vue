@@ -29,7 +29,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import request from '../../utils/request'
@@ -37,7 +37,7 @@ import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const formRef = ref()
-const loading = ref(false)
+const loading = ref<boolean>(false)
 
 const form = reactive({ username: '', password: '', nickname: '' })
 const rules = {
@@ -51,10 +51,10 @@ const rules = {
   ]
 }
 
-async function handleRegister() {
+async function handleRegister(): Promise<void> {
   await formRef.value.validate()
   loading.value = true
-  const res = await request.post('/auth/register', form)
+  const res = await request.post<null>('/auth/register', form)
   if (res.code === 200) {
     ElMessage.success('注册成功，请登录')
     router.push('/login')

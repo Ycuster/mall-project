@@ -1,7 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import type { RouteRecordRaw, RouteMeta } from 'vue-router'
 
-const routes = [
-  // 前台
+interface AppRouteMeta extends RouteMeta {
+  auth?: boolean
+  admin?: boolean
+}
+
+const routes: RouteRecordRaw[] = [
   {
     path: '/',
     component: () => import('../layout/FrontLayout.vue'),
@@ -9,20 +14,19 @@ const routes = [
       { path: '', name: 'Home', component: () => import('../views/front/Home.vue') },
       { path: 'products', name: 'Products', component: () => import('../views/front/Products.vue') },
       { path: 'product/:id', name: 'ProductDetail', component: () => import('../views/front/ProductDetail.vue') },
-      { path: 'cart', name: 'Cart', component: () => import('../views/front/Cart.vue'), meta: { auth: true } },
-      { path: 'checkout', name: 'Checkout', component: () => import('../views/front/Checkout.vue'), meta: { auth: true } },
-      { path: 'orders', name: 'Orders', component: () => import('../views/front/Orders.vue'), meta: { auth: true } },
-      { path: 'profile', name: 'Profile', component: () => import('../views/front/Profile.vue'), meta: { auth: true } },
+      { path: 'cart', name: 'Cart', component: () => import('../views/front/Cart.vue'), meta: { auth: true } as AppRouteMeta },
+      { path: 'checkout', name: 'Checkout', component: () => import('../views/front/Checkout.vue'), meta: { auth: true } as AppRouteMeta },
+      { path: 'orders', name: 'Orders', component: () => import('../views/front/Orders.vue'), meta: { auth: true } as AppRouteMeta },
+      { path: 'profile', name: 'Profile', component: () => import('../views/front/Profile.vue'), meta: { auth: true } as AppRouteMeta },
     ]
   },
   { path: '/login', name: 'Login', component: () => import('../views/front/Login.vue') },
   { path: '/register', name: 'Register', component: () => import('../views/front/Register.vue') },
 
-  // 后台
   {
     path: '/admin',
     component: () => import('../layout/AdminLayout.vue'),
-    meta: { auth: true, admin: true },
+    meta: { auth: true, admin: true } as AppRouteMeta,
     redirect: '/admin/dashboard',
     children: [
       { path: 'dashboard', name: 'AdminDashboard', component: () => import('../views/admin/Dashboard.vue') },
@@ -42,11 +46,13 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('mall_token')
-  const user = JSON.parse(localStorage.getItem('mall_user') || 'null')
+  const user = JSON.parse(localStorage.getItem('mall_user') || 'null') as { role?: string } | null
 
-  if (to.meta.auth && !token) {
+  const meta = to.meta as AppRouteMeta
+
+  if (meta.auth && !token) {
     next({ name: 'Login', query: { redirect: to.fullPath } })
-  } else if (to.meta.admin && user?.role !== 'admin') {
+  } else if (meta.admin && user?.role !== 'admin') {
     next({ name: 'Home' })
   } else {
     next()

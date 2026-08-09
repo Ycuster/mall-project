@@ -72,35 +72,37 @@
   </el-card>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import request from '../../utils/request'
 import { ElMessage } from 'element-plus'
+import type { User, UserRole } from '../../types/user'
+import type { PageResult } from '../../types/api'
 
-const list = ref([])
-const total = ref(0)
-const page = ref(1)
-const keyword = ref('')
-const loading = ref(false)
+const list = ref<User[]>([])
+const total = ref<number>(0)
+const page = ref<number>(1)
+const keyword = ref<string>('')
+const loading = ref<boolean>(false)
 
-async function load(p) {
+async function load(p?: number): Promise<void> {
   if (p) page.value = p
   loading.value = true
-  const res = await request.get('/users', {
+  const res = await request.get<PageResult<User>>('/users', {
     params: { page: page.value, pageSize: 10, keyword: keyword.value }
   })
   if (res.code === 200) { list.value = res.data.list; total.value = res.data.total }
   loading.value = false
 }
 
-async function toggleStatus(id, status) {
-  const res = await request.put(`/users/${id}/status`, { status })
+async function toggleStatus(id: number, status: number): Promise<void> {
+  const res = await request.put<null>(`/users/${id}/status`, { status })
   if (res.code === 200) { ElMessage.success('已更新'); load() }
   else ElMessage.error(res.message || '操作失败')
 }
 
-async function changeRole(id, role) {
-  const res = await request.put(`/users/${id}/role`, { role })
+async function changeRole(id: number, role: UserRole): Promise<void> {
+  const res = await request.put<null>(`/users/${id}/role`, { role })
   if (res.code === 200) { ElMessage.success('已更新'); load() }
   else ElMessage.error(res.message || '操作失败')
 }

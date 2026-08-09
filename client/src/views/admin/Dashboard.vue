@@ -68,35 +68,40 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, nextTick, computed } from 'vue'
 import * as echarts from 'echarts'
 import request from '../../utils/request'
+import type { OrderStatus } from '../../types/order'
 
-const statusMap = { pending: '待付款', paid: '已付款', shipped: '已发货', completed: '已完成', cancelled: '已取消' }
-const statusType = { pending: 'warning', paid: 'primary', shipped: 'success', completed: '', cancelled: 'info' }
+const statusMap: Record<OrderStatus, string> = {
+  pending: '待付款', paid: '已付款', shipped: '已发货', completed: '已完成', cancelled: '已取消'
+}
+const statusType: Record<OrderStatus, string> = {
+  pending: 'warning', paid: 'primary', shipped: 'success', completed: '', cancelled: 'info'
+}
 
-const loading = ref(true)
-const stats = ref({})
-const topProducts = ref([])
-const recentOrders = ref([])
-const revenueChartRef = ref()
-const statusChartRef = ref()
+const loading = ref<boolean>(true)
+const stats = ref<Record<string, unknown>>({})
+const topProducts = ref<Array<{ id: number; name: string; sales: number }>>([])
+const recentOrders = ref<Array<{ id: number; order_no: string; total_amount: number; status: string; created_at: string }>>([])
+const revenueChartRef = ref<HTMLElement | null>(null)
+const statusChartRef = ref<HTMLElement | null>(null)
 
 const statCards = computed(() => [
-  { label: '总营收', value: '¥' + Number(stats.value.totalRevenue || 0).toLocaleString(), icon: 'Coin', color: '#f59e0b', bg: '#fffbeb' },
-  { label: '总订单', value: stats.value.totalOrders || 0, icon: 'Document', color: '#3b82f6', bg: '#eff6ff' },
-  { label: '注册用户', value: stats.value.totalUsers || 0, icon: 'User', color: '#10b981', bg: '#ecfdf5' },
-  { label: '商品数量', value: stats.value.totalProducts || 0, icon: 'Goods', color: '#ef4444', bg: '#fef2f2' }
+  { label: '总营收', value: '¥' + Number(stats.value.totalRevenue as number || 0).toLocaleString(), icon: 'Coin', color: '#f59e0b', bg: '#fffbeb' },
+  { label: '总订单', value: String(stats.value.totalOrders || 0), icon: 'Document', color: '#3b82f6', bg: '#eff6ff' },
+  { label: '注册用户', value: String(stats.value.totalUsers || 0), icon: 'User', color: '#10b981', bg: '#ecfdf5' },
+  { label: '商品数量', value: String(stats.value.totalProducts || 0), icon: 'Goods', color: '#ef4444', bg: '#fef2f2' }
 ])
 
 onMounted(async () => {
   const [s, rev, st, top, recent] = await Promise.all([
-    request.get('/dashboard/stats'),
-    request.get('/dashboard/chart/revenue'),
-    request.get('/dashboard/chart/status'),
-    request.get('/dashboard/top-products'),
-    request.get('/dashboard/recent-orders')
+    request.get<Record<string, unknown>>('/dashboard/stats'),
+    request.get<Array<{ date: string; revenue: number }>>('/dashboard/chart/revenue'),
+    request.get<Array<{ status: string; count: number }>>('/dashboard/chart/status'),
+    request.get<Array<{ id: number; name: string; sales: number }>>('/dashboard/top-products'),
+    request.get<Array<{ id: number; order_no: string; total_amount: number; status: string; created_at: string }>>('/dashboard/recent-orders')
   ])
 
   if (s.code === 200) stats.value = s.data
@@ -106,17 +111,20 @@ onMounted(async () => {
 
   await nextTick()
 
-  // 营收折线图
   if (rev.code === 200 && revenueChartRef.value) {
     const chart = echarts.init(revenueChartRef.value)
-    const labels = [], data = []
+    const labels: string[] = []
+    const data: number[] = []
     const today = new Date()
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today); d.setDate(d.getDate() - i)
       const ds = d.toISOString().split('T')[0]
       labels.push(ds.slice(5))
-      const found = rev.data.find(r => (r.date instanceof Date ? r.date.toISOString().split('T')[0] : r.date) === ds)
-      data.push(found ? +found.revenue : 0)
+      const found = rev.data.find(r => {
+        const rDate = (r.date as unknown as Date) instanceof Date ? (r.date as unknown as Date).toISOString().split('T')[0] : r.date
+        return rDate === ds
+      })
+      data.push(found ? found.revenue : 0)
     }
     chart.setOption({
       tooltip: { trigger: 'axis', formatter: '{b}<br/>营收: ¥{c}' },
@@ -134,15 +142,18 @@ onMounted(async () => {
     })
   }
 
-  // 状态饼图
   if (st.code === 200 && statusChartRef.value) {
     const chart = echarts.init(statusChartRef.value)
-    const colorMap = { pending: '#f59e0b', paid: '#3b82f6', shipped: '#10b981', completed: '#6366f1', cancelled: '#ef4444' }
+    const colorMap: Record<string, string> = { pending: '#f59e0b', paid: '#3b82f6', shipped: '#10b981', completed: '#6366f1', cancelled: '#ef4444' }
     chart.setOption({
       tooltip: { trigger: 'item' },
       series: [{
         type: 'pie', radius: ['40%', '70%'], center: ['50%', '55%'],
-        data: st.data.map(r => ({ name: statusMap[r.status] || r.status, value: r.count, itemStyle: { color: colorMap[r.status] } })),
+        data: (st.data as Array<{ status: string; count: number }>).map(r => ({
+          name: statusMap[r.status as OrderStatus] || r.status,
+          value: r.count,
+          itemStyle: { color: colorMap[r.status] || '#ccc' }
+        })),
         label: { fontSize: 12 },
         emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } }
       }]
