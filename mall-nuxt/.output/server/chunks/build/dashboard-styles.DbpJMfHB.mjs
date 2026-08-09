@@ -1,0 +1,8 @@
+const dashboard_vue_vue_type_style_index_0_scoped_53e8c027_inline_used_lang = ".stat-card[data-v-53e8c027]{align-items:center;border-radius:10px;display:flex;gap:16px}.stat-card[data-v-53e8c027] .el-card__body{align-items:center;display:flex;gap:16px;width:100%}.stat-icon[data-v-53e8c027]{align-items:center;border-radius:12px;display:flex;flex-shrink:0;height:56px;justify-content:center;width:56px}.stat-value[data-v-53e8c027]{font-size:1.6rem;font-weight:700;line-height:1.2}.stat-label[data-v-53e8c027]{color:#909399;font-size:.85rem}";
+
+const dashboardStyles_DbpJMfHB = [
+  dashboard_vue_vue_type_style_index_0_scoped_53e8c027_inline_used_lang
+];
+
+export { dashboardStyles_DbpJMfHB as default };
+//# sourceMappingURL=dashboard-styles.DbpJMfHB.mjs.map

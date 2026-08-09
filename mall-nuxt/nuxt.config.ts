@@ -1,0 +1,56 @@
+// https://nuxt.com/docs/api/configuration/nuxt.config
+export default defineNuxtConfig({
+  devtools: { enabled: true },
+
+  modules: [
+    '@pinia/nuxt'
+  ],
+
+  css: [
+    'element-plus/dist/index.css',
+    '~/assets/css/main.css'
+  ],
+
+  runtimeConfig: {
+    apiBase: process.env.NUXT_API_BASE || 'http://localhost:3001/api',
+    public: {
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || '/api',
+      appName: 'MallShop'
+    }
+  },
+
+  routeRules: {
+    '/api/**': { proxy: 'http://localhost:3001' },
+    '/uploads/**': { proxy: 'http://localhost:3001' },
+    '/admin/**': { ssr: false },
+    '/checkout': { ssr: false },
+    '/cart': { ssr: false },
+    '/orders': { ssr: false },
+    '/profile': { ssr: false },
+    '/login': { ssr: false },
+    '/register': { ssr: false }
+  },
+
+  app: {
+    head: {
+      title: 'MallShop - 精选全球好货，品质生活',
+      htmlAttrs: { lang: 'zh-CN' },
+      meta: [
+        { charset: 'utf-8' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { name: 'description', content: 'MallShop 商城 - 精选全球好货，品质生活从这里开始' },
+        { name: 'keywords', content: '商城,购物,电商,MallShop' },
+        { name: 'format-detection', content: 'telephone=no' }
+      ],
+      link: [
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }
+      ]
+    }
+  },
+
+  typescript: {
+    strict: true
+  },
+
+  compatibilityDate: '2025-01-01'
+})

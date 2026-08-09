@@ -1,0 +1,8 @@
+const PaymentPanel_vue_vue_type_style_index_0_scoped_a6e49a16_inline_used_lang = ".payment-panel[data-v-a6e49a16]{padding:var(--spacing-md)}.payment-panel__methods[data-v-a6e49a16]{display:flex;gap:var(--spacing-md);margin-bottom:var(--spacing-lg)}.payment-panel__method[data-v-a6e49a16]{align-items:center;border:2px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;display:flex;flex:1;gap:var(--spacing-sm);padding:var(--spacing-md);position:relative;transition:all var(--transition-fast)}.payment-panel__method[data-v-a6e49a16]:hover{border-color:var(--color-primary-light)}.payment-panel__method.is-active[data-v-a6e49a16]{background:var(--color-primary-light-9);border-color:var(--color-primary)}.payment-panel__method-icon[data-v-a6e49a16]{font-size:1.5rem}.payment-panel__method-label[data-v-a6e49a16]{font-weight:500}.payment-panel__check[data-v-a6e49a16]{color:var(--color-primary);position:absolute;right:8px;top:8px}.payment-panel__amount[data-v-a6e49a16]{align-items:center;background:var(--color-bg-grey);border-radius:var(--radius-md);display:flex;justify-content:space-between;margin-bottom:var(--spacing-lg);padding:var(--spacing-md) var(--spacing-lg)}.payment-panel__price[data-v-a6e49a16]{color:var(--color-primary);font-size:1.5rem;font-weight:700}.payment-panel__actions[data-v-a6e49a16]{display:flex;gap:var(--spacing-sm);justify-content:flex-end}";
+
+const PaymentPanelStyles_D_Vtc2_N = [
+  PaymentPanel_vue_vue_type_style_index_0_scoped_a6e49a16_inline_used_lang
+];
+
+export { PaymentPanelStyles_D_Vtc2_N as default };
+//# sourceMappingURL=PaymentPanel-styles.D_Vtc2_N.mjs.map
