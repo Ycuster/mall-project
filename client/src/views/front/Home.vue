@@ -26,7 +26,7 @@
             v-for="cat in categories"
             :key="cat.id"
             class="category-item"
-            @click="$router.push({ path: '/products', query: { category: cat.id } })"
+            @click="router.push({ path: '/products', query: { category: cat.id } })"
           >
             <span class="cat-icon">{{ cat.icon || '📦' }}</span>
             <span>{{ cat.name }}</span>
@@ -46,7 +46,13 @@
         </template>
         <el-row :gutter="20">
           <el-col v-for="p in hotProducts" :key="p.id" :xs="12" :sm="8" :md="6" style="margin-bottom: 20px">
-            <ProductCard :product="p" />
+            <ProductCard
+              :product="p"
+              :show-description="false"
+              @click="handleProductClick"
+              @add-to-cart="handleAddToCart"
+              @toggle-favorite="handleToggleFavorite"
+            />
           </el-col>
         </el-row>
       </el-card>
@@ -63,7 +69,13 @@
         </template>
         <el-row :gutter="20">
           <el-col v-for="p in newProducts" :key="p.id" :xs="12" :sm="8" :md="6" style="margin-bottom: 20px">
-            <ProductCard :product="p" />
+            <ProductCard
+              :product="p"
+              :show-description="false"
+              @click="handleProductClick"
+              @add-to-cart="handleAddToCart"
+              @toggle-favorite="handleToggleFavorite"
+            />
           </el-col>
         </el-row>
       </el-card>
@@ -73,14 +85,30 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import request from '../../utils/request'
-import ProductCard from './components/ProductCard.vue'
+import { ProductCard } from '../../components/business'
 import type { Category, Product } from '../../types/product'
 import type { PageResult } from '../../types/api'
+
+const router = useRouter()
 
 const categories = ref<Category[]>([])
 const hotProducts = ref<Product[]>([])
 const newProducts = ref<Product[]>([])
+
+function handleProductClick(product: Product): void {
+  router.push(`/product/${product.id}`)
+}
+
+function handleAddToCart(product: Product): void {
+  ElMessage.success(`已将「${product.name}」加入购物车`)
+}
+
+function handleToggleFavorite(product: Product, favorite: boolean): void {
+  ElMessage.success(favorite ? `已收藏「${product.name}」` : `已取消收藏「${product.name}」`)
+}
 
 onMounted(async () => {
   const [catRes, hotRes, newRes] = await Promise.all([

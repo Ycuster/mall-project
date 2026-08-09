@@ -2,38 +2,29 @@
   <div class="page-container">
     <!-- 搜索 & 筛选 -->
     <el-card shadow="never" style="margin-bottom: 20px">
-      <el-row :gutter="16" align="middle">
-        <el-col :span="6">
-          <el-select v-model="filters.category_id" placeholder="全部分类" clearable @change="load(1)">
-            <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
-          </el-select>
-        </el-col>
-        <el-col :span="4">
-          <el-select v-model="filters.sort" @change="load(1)">
-            <el-option label="最新上架" value="newest" />
-            <el-option label="销量优先" value="sales" />
-            <el-option label="价格↑" value="price_asc" />
-            <el-option label="价格↓" value="price_desc" />
-          </el-select>
-        </el-col>
-        <el-col :span="6">
-          <el-input v-model="filters.keyword" placeholder="搜索商品..." clearable @keydown.enter="load(1)">
-            <template #append>
-              <el-button @click="load(1)"><el-icon><Search /></el-icon></el-button>
-            </template>
-          </el-input>
-        </el-col>
-        <el-col :span="8" style="text-align: right; color: #909399; font-size: 0.85rem">
-          共 <span style="color: #c0392b; font-weight: 700">{{ total }}</span> 件商品
-        </el-col>
-      </el-row>
+      <SearchBar
+        v-model="filters.keyword"
+        v-model:category-id="filters.category_id"
+        v-model:sort-by="filters.sort"
+        :categories="categories"
+        :sort-options="sortOptions"
+        :show-filters="true"
+        :show-result-count="true"
+        :total="total"
+        @search="handleSearch"
+        @filter-change="handleFilterChange"
+      />
     </el-card>
 
     <!-- 商品列表 -->
     <div v-loading="loading">
       <el-row v-if="products.length" :gutter="20">
         <el-col v-for="p in products" :key="p.id" :xs="12" :sm="8" :md="6" style="margin-bottom: 20px">
-          <ProductCard :product="p" />
+          <ProductCard
+            :product="p"
+            @click="handleProductClick"
+            @add-to-cart="handleAddToCart"
+          />
         </el-col>
       </el-row>
       <el-empty v-else description="暂无商品" />
@@ -54,17 +45,27 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import request from '../../utils/request'
-import ProductCard from './components/ProductCard.vue'
+import { ProductCard, SearchBar } from '../../components/business'
 import type { Category, Product, ProductQueryParams } from '../../types/product'
 import type { PageResult } from '../../types/api'
+import type { SortOption } from '../../components/business/product/SearchBar.vue'
 
 const route = useRoute()
+const router = useRouter()
 const products = ref<Product[]>([])
 const categories = ref<Category[]>([])
 const total = ref<number>(0)
 const loading = ref<boolean>(false)
+
+const sortOptions: SortOption[] = [
+  { label: '最新上架', value: 'newest' },
+  { label: '销量优先', value: 'sales' },
+  { label: '价格升序', value: 'price_asc' },
+  { label: '价格降序', value: 'price_desc' }
+]
 
 const filters = reactive<ProductQueryParams>({
   keyword: (route.query.keyword as string) || '',
@@ -85,6 +86,25 @@ async function load(page?: number): Promise<void> {
     total.value = res.data.total
   }
   loading.value = false
+}
+
+function handleSearch(keyword: string): void {
+  filters.keyword = keyword
+  load(1)
+}
+
+function handleFilterChange(newFilters: { category_id: number | ''; sort: string }): void {
+  filters.category_id = newFilters.category_id
+  filters.sort = newFilters.sort
+  load(1)
+}
+
+function handleProductClick(product: Product): void {
+  router.push(`/product/${product.id}`)
+}
+
+function handleAddToCart(product: Product): void {
+  ElMessage.success(`已将「${product.name}」加入购物车`)
 }
 
 watch(() => route.query, (q) => {
