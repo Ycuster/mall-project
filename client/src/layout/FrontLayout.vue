@@ -79,8 +79,8 @@
 
     <!-- 底部 -->
     <footer class="front-footer">
-      <p>© 2024 MallShop · Vue 3 + Element Plus + Express + MySQL 全栈商城</p>
-      <p style="margin-top: 4px; color: #909399; font-size: 13px">毕业设计 & 面试作品展示</p>
+      <p>© 2026 MallShop · Vue 3 + Element Plus + Express + MySQL 全栈商城</p>
+      
     </footer>
   </div>
 </template>
