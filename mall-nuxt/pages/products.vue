@@ -45,11 +45,15 @@ import { ref, reactive, watch } from 'vue'
 import { useRoute } from '#app'
 import { ElMessage } from 'element-plus'
 import { ProductCard, SearchBar } from '~/components/business'
+import { useCartStore } from '~/stores/cart'
+import { useUserStore } from '~/stores/user'
 import type { SortOption } from '~/components/business'
 import type { Category, Product, ProductQueryParams } from '~/types/product'
 import type { PageResult } from '~/types/api'
 
 const route = useRoute()
+const cartStore = useCartStore()
+const userStore = useUserStore()
 
 useSeoMeta({
   title: '商品列表 - MallShop',
@@ -127,7 +131,12 @@ function handleProductClick(product: Product): void {
   navigateTo(`/product/${product.id}`)
 }
 
-function handleAddToCart(product: Product): void {
-  ElMessage.success(`已将「${product.name}」加入购物车`)
+async function handleAddToCart(product: Product): Promise<void> {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录')
+    await navigateTo(`/login?redirect=${encodeURIComponent(useRoute().fullPath)}`)
+    return
+  }
+  await cartStore.add(product.id, 1)
 }
 </script>
