@@ -3,7 +3,7 @@
     <template #header>
       <div style="display: flex; justify-content: space-between; align-items: center">
         <span style="font-weight: 600">分类管理</span>
-        <el-button type="primary" @click="openDialog()">
+        <el-button v-if="userStore.hasPermission('category', 'write')" type="primary" @click="openDialog()">
           <ClientOnly><el-icon><Plus /></el-icon></ClientOnly> 添加分类
         </el-button>
       </div>
@@ -26,9 +26,9 @@
       </el-table-column>
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
-          <el-button type="primary" text size="small" @click="openDialog(row)">编辑</el-button>
-          <el-button type="success" text size="small" @click="openDialog(row, true)">添加子分类</el-button>
-          <el-popconfirm title="确定删除？" @confirm="handleDelete(row.id)">
+          <el-button v-if="userStore.hasPermission('category', 'write')" type="primary" text size="small" @click="openDialog(row)">编辑</el-button>
+          <el-button v-if="userStore.hasPermission('category', 'write')" type="success" text size="small" @click="openDialog(row, true)">添加子分类</el-button>
+          <el-popconfirm v-if="userStore.hasPermission('category', 'delete')" title="确定删除？" @confirm="handleDelete(row.id)">
             <template #reference>
               <el-button type="danger" text size="small">删除</el-button>
             </template>
@@ -63,10 +63,13 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '~/stores/user'
 import type { Category } from '~/types/product'
 import type { ApiResponse } from '~/types/api'
 
 definePageMeta({ layout: 'admin' })
+
+const userStore = useUserStore()
 
 interface CategoryForm {
   name: string
@@ -95,7 +98,7 @@ const formRules = {
 async function load(): Promise<void> {
   loading.value = true
   const { $api } = useNuxtApp()
-  const res = await $api.get<Category[]>('/categories', { params: { _admin: 1 } })
+  const res = await $api.get<Category[]>('/categories', { _admin: 1 })
   if (res.code === 200) list.value = res.data
   loading.value = false
 }

@@ -2,6 +2,15 @@ import { useUserStore } from '~/stores/user'
 
 const PUBLIC_PATHS = ['/login', '/register', '/products', '/product/']
 
+const ADMIN_PERMISSION_MAP: Record<string, { resource: string; action: string }> = {
+  '/admin/dashboard': { resource: 'dashboard', action: 'read' },
+  '/admin/products': { resource: 'product', action: 'read' },
+  '/admin/categories': { resource: 'category', action: 'read' },
+  '/admin/orders': { resource: 'order', action: 'read' },
+  '/admin/users': { resource: 'user', action: 'read' },
+  '/admin/roles': { resource: 'role', action: 'manage' }
+}
+
 export default defineNuxtRouteMiddleware((to, from) => {
   const userStore = useUserStore()
 
@@ -21,7 +30,14 @@ export default defineNuxtRouteMiddleware((to, from) => {
     }
   }
 
-  if (requiresAdmin && !userStore.isAdmin) {
-    return navigateTo('/')
+  if (requiresAdmin) {
+    for (const [pathPrefix, perm] of Object.entries(ADMIN_PERMISSION_MAP)) {
+      if (to.path.startsWith(pathPrefix)) {
+        if (!userStore.hasPermission(perm.resource, perm.action)) {
+          return navigateTo('/admin/dashboard')
+        }
+        break
+      }
+    }
   }
 })

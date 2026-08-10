@@ -46,7 +46,7 @@
         <template #default="{ row }">
           <el-button type="primary" text size="small" @click="viewDetail(row)">详情</el-button>
           <el-button
-            v-if="row.status === 'paid'"
+            v-if="row.status === 'paid' && userStore.hasPermission('order', 'ship')"
             type="success"
             text
             size="small"
@@ -54,7 +54,7 @@
           >
             发货
           </el-button>
-          <el-popconfirm v-if="row.status === 'pending' || row.status === 'paid'" title="确定取消订单？" @confirm="cancelOrder(row.id)">
+          <el-popconfirm v-if="(row.status === 'pending' || row.status === 'paid') && userStore.hasPermission('order', 'cancel')" title="确定取消订单？" @confirm="cancelOrder(row.id)">
             <template #reference>
               <el-button type="danger" text size="small">取消</el-button>
             </template>
@@ -111,10 +111,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useUserStore } from '~/stores/user'
 import type { Order, OrderStatus } from '~/types/order'
 import type { PageResult } from '~/types/api'
 
 definePageMeta({ layout: 'admin' })
+
+const userStore = useUserStore()
 
 const statusMap: Record<OrderStatus, string> = {
   pending: '待付款', paid: '已付款', shipped: '已发货', completed: '已完成', cancelled: '已取消'
@@ -139,7 +142,7 @@ async function load(p?: number): Promise<void> {
   const params: Record<string, unknown> = { page: page.value, pageSize: 10, _admin: 1 }
   if (keyword.value) params.keyword = keyword.value
   if (statusFilter.value) params.status = statusFilter.value
-  const res = await $api.get<PageResult<Order>>('/orders', { params })
+  const res = await $api.get<PageResult<Order>>('/orders', params)
   if (res.code === 200) {
     list.value = res.data.list
     total.value = res.data.total

@@ -33,6 +33,7 @@ app.use('/api/orders', require('./routes/order'))
 app.use('/api/users', require('./routes/user'))
 app.use('/api/dashboard', require('./routes/dashboard'))
 app.use('/api/upload', require('./routes/upload'))
+app.use('/api/roles', require('./routes/role'))
 
 // 全局错误处理
 app.use((err, req, res, next) => {
@@ -60,14 +61,97 @@ async function seed() {
     if (c > 0) return
 
     console.log('🌱 初始化种子数据...')
+
+    await db.query(`CREATE TABLE IF NOT EXISTS roles (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      name VARCHAR(50) NOT NULL UNIQUE,
+      display_name VARCHAR(100) NOT NULL,
+      description VARCHAR(255) DEFAULT '',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`)
+
+    await db.query(`CREATE TABLE IF NOT EXISTS permissions (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      name VARCHAR(100) NOT NULL UNIQUE,
+      display_name VARCHAR(100) NOT NULL,
+      resource VARCHAR(50) NOT NULL,
+      action VARCHAR(50) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`)
+
+    await db.query(`CREATE TABLE IF NOT EXISTS role_permissions (
+      role_id INT NOT NULL,
+      permission_id INT NOT NULL,
+      PRIMARY KEY (role_id, permission_id),
+      FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+      FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
+    )`)
+
+    const [roleCols] = await db.query('SHOW COLUMNS FROM users LIKE ?', ['role_id'])
+    if (!roleCols.length) {
+      await db.query('ALTER TABLE users ADD COLUMN role_id INT DEFAULT NULL')
+    }
+
+    await db.query('INSERT INTO roles (name, display_name, description) VALUES ?', [[
+      ['super_admin', '超级管理员', '拥有所有权限'],
+      ['product_manager', '商品管理员', '管理商品和分类'],
+      ['order_manager', '订单管理员', '管理订单发货和取消'],
+      ['viewer', '只读查看者', '只能查看各模块数据'],
+      ['user', '普通用户', '前台普通用户角色']
+    ]])
+
+    const permData = [
+      ['dashboard:read', '查看数据看板', 'dashboard', 'read'],
+      ['product:read', '查看商品', 'product', 'read'],
+      ['product:write', '编辑商品', 'product', 'write'],
+      ['product:delete', '删除商品', 'product', 'delete'],
+      ['category:read', '查看分类', 'category', 'read'],
+      ['category:write', '编辑分类', 'category', 'write'],
+      ['category:delete', '删除分类', 'category', 'delete'],
+      ['order:read', '查看订单', 'order', 'read'],
+      ['order:write', '编辑订单', 'order', 'write'],
+      ['order:ship', '订单发货', 'order', 'ship'],
+      ['order:cancel', '取消订单', 'order', 'cancel'],
+      ['user:read', '查看用户', 'user', 'read'],
+      ['user:write', '编辑用户', 'user', 'write'],
+      ['user:delete', '删除用户', 'user', 'delete'],
+      ['role:manage', '管理角色权限', 'role', 'manage']
+    ]
+    await db.query('INSERT INTO permissions (name, display_name, resource, action) VALUES ?', [permData])
+
+    const [[{ id: saId }]] = await db.query("SELECT id FROM roles WHERE name='super_admin'")
+    const [[{ id: pmId }]] = await db.query("SELECT id FROM roles WHERE name='product_manager'")
+    const [[{ id: omId }]] = await db.query("SELECT id FROM roles WHERE name='order_manager'")
+    const [[{ id: viId }]] = await db.query("SELECT id FROM roles WHERE name='viewer'")
+    const [[{ id: urId }]] = await db.query("SELECT id FROM roles WHERE name='user'")
+
+    const [allPerms] = await db.query('SELECT id, resource, action FROM permissions')
+    const permMap = {}
+    for (const p of allPerms) permMap[`${p.resource}:${p.action}`] = p.id
+
+    const rpValues = []
+
+    for (const key of Object.keys(permMap)) rpValues.push([saId, permMap[key]])
+
+    ;['dashboard:read','product:read','product:write','product:delete','category:read','category:write','category:delete']
+      .forEach(k => rpValues.push([pmId, permMap[k]]))
+
+    ;['dashboard:read','order:read','order:write','order:ship','order:cancel']
+      .forEach(k => rpValues.push([omId, permMap[k]]))
+
+    ;['dashboard:read','product:read','category:read','order:read','user:read']
+      .forEach(k => rpValues.push([viId, permMap[k]]))
+
+    await db.query('INSERT INTO role_permissions (role_id, permission_id) VALUES ?', [rpValues])
+
     const adminPwd = await bcrypt.hash('admin123', 10)
     const testPwd = await bcrypt.hash('test123', 10)
 
-    await db.query('INSERT INTO users (username,password,nickname,email,phone,role) VALUES ?', [[
-      ['admin', adminPwd, '系统管理员', 'admin@mall.com', '13800000000', 'admin'],
-      ['test', testPwd, '测试用户', 'test@mall.com', '13900000000', 'user'],
-      ['zhangsan', testPwd, '张三', 'zhangsan@mall.com', '13700000001', 'user'],
-      ['lisi', testPwd, '李四', 'lisi@mall.com', '13700000002', 'user']
+    await db.query('INSERT INTO users (username,password,nickname,email,phone,role,role_id) VALUES ?', [[
+      ['admin', adminPwd, '系统管理员', 'admin@mall.com', '13800000000', 'admin', saId],
+      ['test', testPwd, '测试用户', 'test@mall.com', '13900000000', 'user', urId],
+      ['zhangsan', testPwd, '张三', 'zhangsan@mall.com', '13700000001', 'user', urId],
+      ['lisi', testPwd, '李四', 'lisi@mall.com', '13700000002', 'user', urId]
     ]])
 
     await db.query('INSERT INTO categories (name, icon, sort_order) VALUES ?', [[

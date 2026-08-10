@@ -1,9 +1,11 @@
 const router = require('express').Router()
 const db = require('../config/db')
-const { auth, adminAuth } = require('../middleware/auth')
+const { auth, requirePermission } = require('../middleware/auth')
 
-// 统计概览
-router.get('/stats', auth, adminAuth, async (req, res) => {
+router.get('/stats', auth, async (req, res, next) => {
+  const rp = await requirePermission('dashboard', 'read')
+  rp(req, res, next)
+}, async (req, res) => {
   try {
     const [[users]] = await db.query('SELECT COUNT(*) as c FROM users WHERE role="user"')
     const [[products]] = await db.query('SELECT COUNT(*) as c FROM products')
@@ -39,8 +41,10 @@ router.get('/stats', auth, adminAuth, async (req, res) => {
   }
 })
 
-// 近7天营收趋势
-router.get('/chart/revenue', auth, adminAuth, async (req, res) => {
+router.get('/chart/revenue', auth, async (req, res, next) => {
+  const rp = await requirePermission('dashboard', 'read')
+  rp(req, res, next)
+}, async (req, res) => {
   try {
     const [rows] = await db.query(`
       SELECT DATE(created_at) as date,
@@ -58,8 +62,10 @@ router.get('/chart/revenue', auth, adminAuth, async (req, res) => {
   }
 })
 
-// 订单状态分布
-router.get('/chart/status', auth, adminAuth, async (req, res) => {
+router.get('/chart/status', auth, async (req, res, next) => {
+  const rp = await requirePermission('dashboard', 'read')
+  rp(req, res, next)
+}, async (req, res) => {
   try {
     const [rows] = await db.query('SELECT status, COUNT(*) as count FROM orders GROUP BY status')
     res.json({ code: 200, data: rows })
@@ -68,8 +74,10 @@ router.get('/chart/status', auth, adminAuth, async (req, res) => {
   }
 })
 
-// 分类销售占比
-router.get('/chart/category', auth, adminAuth, async (req, res) => {
+router.get('/chart/category', auth, async (req, res, next) => {
+  const rp = await requirePermission('dashboard', 'read')
+  rp(req, res, next)
+}, async (req, res) => {
   try {
     const [rows] = await db.query(`
       SELECT c.name, COALESCE(SUM(oi.quantity * oi.price),0) as revenue
@@ -86,8 +94,10 @@ router.get('/chart/category', auth, adminAuth, async (req, res) => {
   }
 })
 
-// 热销排行
-router.get('/top-products', auth, adminAuth, async (req, res) => {
+router.get('/top-products', auth, async (req, res, next) => {
+  const rp = await requirePermission('dashboard', 'read')
+  rp(req, res, next)
+}, async (req, res) => {
   try {
     const [rows] = await db.query(
       'SELECT id, name, price, sales, cover FROM products ORDER BY sales DESC LIMIT 10'
@@ -98,8 +108,10 @@ router.get('/top-products', auth, adminAuth, async (req, res) => {
   }
 })
 
-// 最近订单
-router.get('/recent-orders', auth, adminAuth, async (req, res) => {
+router.get('/recent-orders', auth, async (req, res, next) => {
+  const rp = await requirePermission('dashboard', 'read')
+  rp(req, res, next)
+}, async (req, res) => {
   try {
     const [rows] = await db.query(`
       SELECT o.id, o.order_no, o.total_amount, o.status, o.created_at, u.username, u.nickname

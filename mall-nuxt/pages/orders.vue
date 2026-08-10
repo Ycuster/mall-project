@@ -74,7 +74,7 @@ async function load(p?: number): Promise<void> {
   loading.value = true
   try {
     const { $api } = useNuxtApp()
-    const res = await $api.get<PageResult<Order>>('/orders', { params: { page: page.value, pageSize } })
+    const res = await $api.get<PageResult<Order>>('/orders', { page: page.value, pageSize })
     if (res.code === 200) { orders.value = res.data.list; total.value = res.data.total }
   } catch {}
   loading.value = false

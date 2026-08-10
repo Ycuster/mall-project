@@ -1,8 +1,7 @@
 const router = require('express').Router()
 const db = require('../config/db')
-const { auth, adminAuth } = require('../middleware/auth')
+const { auth, requirePermission } = require('../middleware/auth')
 
-// 商品列表（公开 - 前台）
 router.get('/', async (req, res) => {
   try {
     let {
@@ -17,7 +16,6 @@ router.get('/', async (req, res) => {
     let where = 'WHERE p.status = ?', params = []
     let countWhere = 'WHERE p.status = ?', countParams = []
 
-    // 前台只显示上架的
     if (req.query._admin) {
       where = 'WHERE 1=1'; countWhere = 'WHERE 1=1'
       params = []; countParams = []
@@ -88,7 +86,6 @@ router.get('/', async (req, res) => {
   }
 })
 
-// 商品详情
 router.get('/:id', async (req, res) => {
   try {
     const [rows] = await db.query(
@@ -105,8 +102,10 @@ router.get('/:id', async (req, res) => {
   }
 })
 
-// 新增商品（管理员）
-router.post('/', auth, adminAuth, async (req, res) => {
+router.post('/', auth, async (req, res, next) => {
+  const rp = await requirePermission('product', 'write')
+  rp(req, res, next)
+}, async (req, res) => {
   try {
     const {
       name, description, detail, price, original_price,
@@ -134,8 +133,10 @@ router.post('/', auth, adminAuth, async (req, res) => {
   }
 })
 
-// 更新商品（管理员）
-router.put('/:id', auth, adminAuth, async (req, res) => {
+router.put('/:id', auth, async (req, res, next) => {
+  const rp = await requirePermission('product', 'write')
+  rp(req, res, next)
+}, async (req, res) => {
   try {
     const {
       name, description, detail, price, original_price,
@@ -161,10 +162,11 @@ router.put('/:id', auth, adminAuth, async (req, res) => {
   }
 })
 
-// 删除商品（管理员）
-router.delete('/:id', auth, adminAuth, async (req, res) => {
+router.delete('/:id', auth, async (req, res, next) => {
+  const rp = await requirePermission('product', 'delete')
+  rp(req, res, next)
+}, async (req, res) => {
   try {
-    // 检查是否有未完成订单
     const [[{ count }]] = await db.query(
       `SELECT COUNT(*) as count FROM order_items oi
        JOIN orders o ON oi.order_id = o.id

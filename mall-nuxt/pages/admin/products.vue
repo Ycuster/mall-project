@@ -6,7 +6,7 @@
         <div style="display: flex; gap: 10px">
           <el-input v-model="keyword" placeholder="搜索商品..." clearable style="width: 200px"
             @keydown.enter="load(1)" @clear="load(1)" />
-          <el-button type="primary" @click="openDialog()">
+          <el-button v-if="userStore.hasPermission('product', 'write')" type="primary" @click="openDialog()">
             <ClientOnly><el-icon><Plus /></el-icon></ClientOnly> 添加商品
           </el-button>
         </div>
@@ -41,8 +41,8 @@
       </el-table-column>
       <el-table-column label="操作" width="160" fixed="right">
         <template #default="{ row }">
-          <el-button type="primary" text size="small" @click="openDialog(row)">编辑</el-button>
-          <el-popconfirm title="确定删除？" @confirm="handleDelete(row.id)">
+          <el-button v-if="userStore.hasPermission('product', 'write')" type="primary" text size="small" @click="openDialog(row)">编辑</el-button>
+          <el-popconfirm v-if="userStore.hasPermission('product', 'delete')" title="确定删除？" @confirm="handleDelete(row.id)">
             <template #reference>
               <el-button type="danger" text size="small">删除</el-button>
             </template>
@@ -187,7 +187,7 @@ async function load(p?: number): Promise<void> {
   loading.value = true
   const { $api } = useNuxtApp()
   const res = await $api.get<PageResult<Product>>('/products', {
-    params: { page: page.value, pageSize: 10, keyword: keyword.value, _admin: 1, status: '' }
+    page: page.value, pageSize: 10, keyword: keyword.value, _admin: 1, status: ''
   })
   if (res.code === 200) { list.value = res.data.list; total.value = res.data.total }
   loading.value = false

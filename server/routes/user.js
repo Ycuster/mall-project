@@ -1,9 +1,11 @@
 const router = require('express').Router()
 const db = require('../config/db')
-const { auth, adminAuth } = require('../middleware/auth')
+const { auth, requirePermission } = require('../middleware/auth')
 
-// 用户列表（管理员）
-router.get('/', auth, adminAuth, async (req, res) => {
+router.get('/', auth, async (req, res, next) => {
+  const rp = await requirePermission('user', 'read')
+  rp(req, res, next)
+}, async (req, res) => {
   try {
     const { keyword, status, page = 1, pageSize = 10 } = req.query
     let where = 'WHERE 1=1', countWhere = 'WHERE 1=1'
@@ -25,7 +27,7 @@ router.get('/', auth, adminAuth, async (req, res) => {
     params.push(+pageSize, offset)
 
     const [list] = await db.query(
-      `SELECT id, username, nickname, email, phone, avatar, role, status, created_at
+      `SELECT id, username, nickname, email, phone, avatar, role, role_id, status, created_at
        FROM users ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
       params
     )
@@ -40,30 +42,39 @@ router.get('/', auth, adminAuth, async (req, res) => {
   }
 })
 
-// 修改用户状态（管理员）
-router.put('/:id/status', auth, adminAuth, async (req, res) => {
+router.put('/:id', auth, async (req, res, next) => {
+  const rp = await requirePermission('user', 'write')
+  rp(req, res, next)
+}, async (req, res) => {
   try {
-    const { status } = req.body
     if (+req.params.id === req.user.id) {
-      return res.json({ code: 400, message: '不能修改自己的状态' })
+      const { nickname, email, phone } = req.body
+      await db.query('UPDATE users SET nickname=?, email=?, phone=? WHERE id=?',
+        [nickname || '', email || '', phone || '', req.params.id])
+      return res.json({ code: 200, message: '更新成功' })
     }
-    await db.query('UPDATE users SET status=? WHERE id=?', [+status, req.params.id])
+    const { nickname, email, phone, role, role_id, status } = req.body
+    await db.query('UPDATE users SET nickname=?, email=?, phone=?, role=?, role_id=?, status=? WHERE id=?',
+      [nickname || '', email || '', phone || '', role || 'user', role_id || null, status ?? 1, req.params.id])
     res.json({ code: 200, message: '更新成功' })
   } catch (e) {
+    console.error(e)
     res.json({ code: 500, message: '服务器错误' })
   }
 })
 
-// 修改用户角色（管理员）
-router.put('/:id/role', auth, adminAuth, async (req, res) => {
+router.delete('/:id', auth, async (req, res, next) => {
+  const rp = await requirePermission('user', 'delete')
+  rp(req, res, next)
+}, async (req, res) => {
   try {
-    const { role } = req.body
     if (+req.params.id === req.user.id) {
-      return res.json({ code: 400, message: '不能修改自己的角色' })
+      return res.json({ code: 400, message: '不能删除自己' })
     }
-    await db.query('UPDATE users SET role=? WHERE id=?', [role, req.params.id])
-    res.json({ code: 200, message: '更新成功' })
+    await db.query('DELETE FROM users WHERE id=?', [req.params.id])
+    res.json({ code: 200, message: '删除成功' })
   } catch (e) {
+    console.error(e)
     res.json({ code: 500, message: '服务器错误' })
   }
 })

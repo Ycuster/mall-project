@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { User, AuthResponse, LoginForm } from '~/types/user'
+import type { User, AuthResponse, LoginForm, Permission } from '~/types/user'
 import type { ApiResponse } from '~/types/api'
 
 export const useUserStore = defineStore('user', () => {
@@ -9,6 +9,16 @@ export const useUserStore = defineStore('user', () => {
 
   const isLoggedIn = computed<boolean>(() => !!token.value)
   const isAdmin = computed<boolean>(() => user.value?.role === 'admin')
+
+  function hasPermission(resource: string, action: string): boolean {
+    if (user.value?.role === 'admin' && !user.value?.role_id) return true
+    return user.value?.permissions?.some(p => p.resource === resource && p.action === action) ?? false
+  }
+
+  function hasAnyPermission(resource: string): boolean {
+    if (user.value?.role === 'admin' && !user.value?.role_id) return true
+    return user.value?.permissions?.some(p => p.resource === resource) ?? false
+  }
 
   function setAuth(t: string, u: User | null): void {
     token.value = t
@@ -40,5 +50,5 @@ export const useUserStore = defineStore('user', () => {
     return res
   }
 
-  return { token, user, isLoggedIn, isAdmin, setAuth, logout, fetchProfile, login }
+  return { token, user, isLoggedIn, isAdmin, hasPermission, hasAnyPermission, setAuth, logout, fetchProfile, login }
 })

@@ -1,8 +1,7 @@
 const router = require('express').Router()
 const db = require('../config/db')
-const { auth, adminAuth } = require('../middleware/auth')
+const { auth, requirePermission } = require('../middleware/auth')
 
-// 获取分类列表（公开）
 router.get('/', async (req, res) => {
   try {
     const [rows] = await db.query(
@@ -14,8 +13,10 @@ router.get('/', async (req, res) => {
   }
 })
 
-// 管理端：获取所有分类（含禁用）
-router.get('/all', auth, adminAuth, async (req, res) => {
+router.get('/all', auth, async (req, res, next) => {
+  const rp = await requirePermission('category', 'read')
+  rp(req, res, next)
+}, async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM categories ORDER BY sort_order, id')
     res.json({ code: 200, data: rows })
@@ -24,8 +25,10 @@ router.get('/all', auth, adminAuth, async (req, res) => {
   }
 })
 
-// 新增分类
-router.post('/', auth, adminAuth, async (req, res) => {
+router.post('/', auth, async (req, res, next) => {
+  const rp = await requirePermission('category', 'write')
+  rp(req, res, next)
+}, async (req, res) => {
   try {
     const { name, icon, sort_order } = req.body
     if (!name) return res.json({ code: 400, message: '分类名称不能为空' })
@@ -44,8 +47,10 @@ router.post('/', auth, adminAuth, async (req, res) => {
   }
 })
 
-// 更新分类
-router.put('/:id', auth, adminAuth, async (req, res) => {
+router.put('/:id', auth, async (req, res, next) => {
+  const rp = await requirePermission('category', 'write')
+  rp(req, res, next)
+}, async (req, res) => {
   try {
     const { name, icon, sort_order, status } = req.body
     await db.query(
@@ -58,8 +63,10 @@ router.put('/:id', auth, adminAuth, async (req, res) => {
   }
 })
 
-// 删除分类
-router.delete('/:id', auth, adminAuth, async (req, res) => {
+router.delete('/:id', auth, async (req, res, next) => {
+  const rp = await requirePermission('category', 'delete')
+  rp(req, res, next)
+}, async (req, res) => {
   try {
     const [[{ count }]] = await db.query(
       'SELECT COUNT(*) as count FROM products WHERE category_id=?', [req.params.id]

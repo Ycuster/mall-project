@@ -16,25 +16,13 @@
         text-color="rgba(255,255,255,0.65)"
         active-text-color="#fff"
       >
-        <el-menu-item index="/admin/dashboard">
-          <ClientOnly><el-icon><DataAnalysis /></el-icon></ClientOnly>
-          <template #title>数据看板</template>
-        </el-menu-item>
-        <el-menu-item index="/admin/products">
-          <ClientOnly><el-icon><Goods /></el-icon></ClientOnly>
-          <template #title>商品管理</template>
-        </el-menu-item>
-        <el-menu-item index="/admin/categories">
-          <ClientOnly><el-icon><Menu /></el-icon></ClientOnly>
-          <template #title>分类管理</template>
-        </el-menu-item>
-        <el-menu-item index="/admin/orders">
-          <ClientOnly><el-icon><Document /></el-icon></ClientOnly>
-          <template #title>订单管理</template>
-        </el-menu-item>
-        <el-menu-item index="/admin/users">
-          <ClientOnly><el-icon><User /></el-icon></ClientOnly>
-          <template #title>用户管理</template>
+        <el-menu-item
+          v-for="item in visibleMenuItems"
+          :key="item.path"
+          :index="item.path"
+        >
+          <ClientOnly><el-icon><component :is="item.icon" /></el-icon></ClientOnly>
+          <template #title>{{ item.title }}</template>
         </el-menu-item>
       </el-menu>
     </el-aside>
@@ -92,12 +80,34 @@ const route = useRoute()
 const userStore = useUserStore()
 const isCollapse = ref<boolean>(false)
 
+interface MenuItem {
+  path: string
+  title: string
+  icon: string
+  resource: string
+  action: string
+}
+
+const allMenuItems: MenuItem[] = [
+  { path: '/admin/dashboard', title: '数据看板', icon: 'DataAnalysis', resource: 'dashboard', action: 'read' },
+  { path: '/admin/products', title: '商品管理', icon: 'Goods', resource: 'product', action: 'read' },
+  { path: '/admin/categories', title: '分类管理', icon: 'Menu', resource: 'category', action: 'read' },
+  { path: '/admin/orders', title: '订单管理', icon: 'Document', resource: 'order', action: 'read' },
+  { path: '/admin/users', title: '用户管理', icon: 'User', resource: 'user', action: 'read' },
+  { path: '/admin/roles', title: '角色权限', icon: 'Lock', resource: 'role', action: 'manage' }
+]
+
+const visibleMenuItems = computed<MenuItem[]>(() =>
+  allMenuItems.filter(item => userStore.hasPermission(item.resource, item.action))
+)
+
 const titleMap: Record<string, string> = {
   '/admin/dashboard': '数据看板',
   '/admin/products': '商品管理',
   '/admin/categories': '分类管理',
   '/admin/orders': '订单管理',
-  '/admin/users': '用户管理'
+  '/admin/users': '用户管理',
+  '/admin/roles': '角色权限'
 }
 
 const currentTitle = computed<string>(() => titleMap[route.path] || '')

@@ -88,7 +88,7 @@ async function load(page?: number): Promise<void> {
     const { $api } = useNuxtApp()
     const params: Record<string, unknown> = { ...filters }
     Object.keys(params).forEach(k => { if (params[k] === '' || params[k] === null) delete params[k] })
-    const res = await $api.get<PageResult<Product>>('/products', { params })
+    const res = await $api.get<PageResult<Product>>('/products', params)
     if (res.code === 200) {
       products.value = res.data.list
       total.value = res.data.total

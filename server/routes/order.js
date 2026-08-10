@@ -1,8 +1,7 @@
 const router = require('express').Router()
 const db = require('../config/db')
-const { auth, adminAuth } = require('../middleware/auth')
+const { auth, requirePermission } = require('../middleware/auth')
 
-// 生成订单号
 function genOrderNo() {
   const d = new Date()
   const ts = [d.getFullYear(), d.getMonth()+1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()]
@@ -10,7 +9,6 @@ function genOrderNo() {
   return ts + String(Math.floor(Math.random() * 100000)).padStart(5, '0')
 }
 
-// 创建订单
 router.post('/', auth, async (req, res) => {
   const conn = await db.getConnection()
   try {
@@ -47,7 +45,6 @@ router.post('/', auth, async (req, res) => {
         price: p.price
       })
 
-      // 扣减库存，增加销量
       await conn.query(
         'UPDATE products SET stock = stock - ?, sales = sales + ? WHERE id = ?',
         [it.quantity, it.quantity, p.id]
@@ -68,7 +65,6 @@ router.post('/', auth, async (req, res) => {
       )
     }
 
-    // 删除已购买的购物车项
     await conn.query(
       'DELETE FROM cart_items WHERE user_id=? AND product_id IN (?)',
       [req.user.id, items.map(i => i.product_id)]
@@ -85,11 +81,10 @@ router.post('/', auth, async (req, res) => {
   }
 })
 
-// 订单列表
 router.get('/', auth, async (req, res) => {
   try {
     const { status, page = 1, pageSize = 10, user_id } = req.query
-    const isAdmin = req.user.role === 'admin'
+    const isAdmin = req.user.role === 'admin' || (req.user.role_id && req.user.role_id > 0)
 
     let where = 'WHERE 1=1', countWhere = 'WHERE 1=1'
     let params = [], countParams = []
@@ -131,7 +126,6 @@ router.get('/', auth, async (req, res) => {
   }
 })
 
-// 订单详情
 router.get('/:id', auth, async (req, res) => {
   try {
     const [orders] = await db.query(
@@ -143,7 +137,8 @@ router.get('/:id', auth, async (req, res) => {
     if (!orders.length) return res.json({ code: 404, message: '订单不存在' })
 
     const order = orders[0]
-    if (req.user.role !== 'admin' && order.user_id !== req.user.id) {
+    const isAdmin = req.user.role === 'admin' || (req.user.role_id && req.user.role_id > 0)
+    if (!isAdmin && order.user_id !== req.user.id) {
       return res.json({ code: 403, message: '无权查看' })
     }
 
@@ -155,8 +150,54 @@ router.get('/:id', auth, async (req, res) => {
   }
 })
 
-// 更新订单状态（管理员）
-router.put('/:id/status', auth, async (req, res) => {
+router.put('/:id/ship', auth, async (req, res, next) => {
+  const rp = await requirePermission('order', 'ship')
+  rp(req, res, next)
+}, async (req, res) => {
+  try {
+    const [orders] = await db.query('SELECT * FROM orders WHERE id=?', [req.params.id])
+    if (!orders.length) return res.json({ code: 404, message: '订单不存在' })
+    if (orders[0].status !== 'paid') return res.json({ code: 400, message: '只能发货已付款订单' })
+
+    await db.query('UPDATE orders SET status=?, ship_time=NOW() WHERE id=?', ['shipped', req.params.id])
+    res.json({ code: 200, message: '发货成功' })
+  } catch (e) {
+    console.error(e)
+    res.json({ code: 500, message: '服务器错误' })
+  }
+})
+
+router.put('/:id/cancel', auth, async (req, res, next) => {
+  const rp = await requirePermission('order', 'cancel')
+  rp(req, res, next)
+}, async (req, res) => {
+  try {
+    const [orders] = await db.query('SELECT * FROM orders WHERE id=?', [req.params.id])
+    if (!orders.length) return res.json({ code: 404, message: '订单不存在' })
+    const order = orders[0]
+    if (!['pending', 'paid'].includes(order.status)) {
+      return res.json({ code: 400, message: '当前状态不可取消' })
+    }
+
+    await db.query('UPDATE orders SET status=? WHERE id=?', ['cancelled', req.params.id])
+
+    const [items] = await db.query('SELECT * FROM order_items WHERE order_id=?', [order.id])
+    for (const it of items) {
+      await db.query('UPDATE products SET stock=stock+?, sales=sales-? WHERE id=?',
+        [it.quantity, it.quantity, it.product_id])
+    }
+
+    res.json({ code: 200, message: '订单已取消' })
+  } catch (e) {
+    console.error(e)
+    res.json({ code: 500, message: '服务器错误' })
+  }
+})
+
+router.put('/:id/status', auth, async (req, res, next) => {
+  const rp = await requirePermission('order', 'write')
+  rp(req, res, next)
+}, async (req, res) => {
   try {
     const { status } = req.body
     const validTransitions = {
@@ -172,8 +213,7 @@ router.put('/:id/status', auth, async (req, res) => {
 
     const order = orders[0]
 
-    // 非管理员只能取消自己的待付款订单
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 'admin' && !req.user.role_id) {
       if (status !== 'cancelled' || order.user_id !== req.user.id || order.status !== 'pending') {
         return res.json({ code: 403, message: '无权操作' })
       }
@@ -189,7 +229,6 @@ router.put('/:id/status', auth, async (req, res) => {
 
     await db.query(`UPDATE orders SET status=? ${extra} WHERE id=?`, [status, req.params.id])
 
-    // 取消订单时恢复库存
     if (status === 'cancelled') {
       const [items] = await db.query('SELECT * FROM order_items WHERE order_id=?', [order.id])
       for (const it of items) {

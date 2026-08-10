@@ -20,10 +20,10 @@
       <el-table-column label="昵称" prop="nickname" width="140" />
       <el-table-column label="邮箱" prop="email" min-width="180" show-overflow-tooltip />
       <el-table-column label="手机" prop="phone" width="130" />
-      <el-table-column label="角色" width="100" align="center">
+      <el-table-column label="角色" width="120" align="center">
         <template #default="{ row }">
           <el-tag :type="row.role === 'admin' ? 'danger' : ''" size="small">
-            {{ row.role === 'admin' ? '管理员' : '普通用户' }}
+            {{ getRoleDisplayName(row) }}
           </el-tag>
         </template>
       </el-table-column>
@@ -40,8 +40,8 @@
       <el-table-column label="注册时间" prop="created_at" width="170" />
       <el-table-column label="操作" width="160" fixed="right">
         <template #default="{ row }">
-          <el-button type="primary" text size="small" @click="openDialog(row)">编辑</el-button>
-          <el-popconfirm title="确定删除？" @confirm="handleDelete(row.id)">
+          <el-button v-if="userStore.hasPermission('user', 'write')" type="primary" text size="small" @click="openDialog(row)">编辑</el-button>
+          <el-popconfirm v-if="userStore.hasPermission('user', 'delete')" title="确定删除？" @confirm="handleDelete(row.id)">
             <template #reference>
               <el-button type="danger" text size="small">删除</el-button>
             </template>
@@ -75,9 +75,8 @@
           <el-input v-model="form.phone" />
         </el-form-item>
         <el-form-item label="角色">
-          <el-select v-model="form.role" style="width: 100%">
-            <el-option label="普通用户" value="user" />
-            <el-option label="管理员" value="admin" />
+          <el-select v-model="form.role_id" style="width: 100%" @change="handleRoleChange">
+            <el-option v-for="r in roles" :key="r.id" :label="r.display_name" :value="r.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
@@ -95,10 +94,14 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import type { User, UserRole } from '~/types/user'
+import { useUserStore } from '~/stores/user'
+import type { User, UserRole, Role } from '~/types/user'
 import type { PageResult } from '~/types/api'
 
 definePageMeta({ layout: 'admin' })
+
+const userStore = useUserStore()
+const roles = ref<Role[]>([])
 
 interface UserForm {
   username: string
@@ -106,6 +109,7 @@ interface UserForm {
   email: string
   phone: string
   role: UserRole
+  role_id: number
   status: number
 }
 
@@ -120,7 +124,7 @@ const saving = ref<boolean>(false)
 const formRef = ref()
 
 const form = reactive<UserForm>({
-  username: '', nickname: '', email: '', phone: '', role: 'user', status: 1
+  username: '', nickname: '', email: '', phone: '', role: 'user', role_id: 0, status: 1
 })
 
 const formRules = {
@@ -134,12 +138,27 @@ async function load(p?: number): Promise<void> {
   const { $api } = useNuxtApp()
   const params: Record<string, unknown> = { page: page.value, pageSize: 10, _admin: 1 }
   if (keyword.value) params.keyword = keyword.value
-  const res = await $api.get<PageResult<User>>('/users', { params })
+  const res = await $api.get<PageResult<User>>('/users', params)
   if (res.code === 200) {
     list.value = res.data.list
     total.value = res.data.total
   }
   loading.value = false
+}
+
+function getRoleDisplayName(row: User): string {
+  if (row.role_id) {
+    const r = roles.value.find(r => r.id === row.role_id)
+    if (r) return r.display_name
+  }
+  return row.role === 'admin' ? '管理员' : '普通用户'
+}
+
+function handleRoleChange(roleId: number): void {
+  const r = roles.value.find(r => r.id === roleId)
+  if (r) {
+    form.role = r.name === 'super_admin' ? 'admin' : 'user'
+  }
 }
 
 function openDialog(row: User): void {
@@ -149,6 +168,7 @@ function openDialog(row: User): void {
   form.email = row.email
   form.phone = row.phone
   form.role = row.role
+  form.role_id = row.role_id || 0
   form.status = row.status
   dialogVisible.value = true
 }
@@ -162,6 +182,7 @@ async function handleSave(): Promise<void> {
     email: form.email,
     phone: form.phone,
     role: form.role,
+    role_id: form.role_id || null,
     status: form.status
   })
   if (res.code === 200) {
@@ -193,5 +214,10 @@ async function toggleStatus(id: number, status: number): Promise<void> {
   }
 }
 
-onMounted(() => load())
+onMounted(async () => {
+  load()
+  const { $api } = useNuxtApp()
+  const roleRes = await $api.get<Role[]>('/roles')
+  if (roleRes.code === 200) roles.value = roleRes.data
+})
 </script>

@@ -2,9 +2,8 @@ const router = require('express').Router()
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const db = require('../config/db')
-const { auth, SECRET } = require('../middleware/auth')
+const { auth, getUserPermissions, SECRET } = require('../middleware/auth')
 
-// 注册
 router.post('/register', async (req, res) => {
   try {
     const { username, password, nickname, email, phone } = req.body
@@ -22,9 +21,11 @@ router.post('/register', async (req, res) => {
     if (exists.length) return res.json({ code: 400, message: '用户名已存在' })
 
     const hash = await bcrypt.hash(password, 10)
+    const [roleRows] = await db.query("SELECT id FROM roles WHERE name = 'user' LIMIT 1")
+    const roleId = roleRows.length ? roleRows[0].id : null
     await db.query(
-      'INSERT INTO users (username, password, nickname, email, phone) VALUES (?,?,?,?,?)',
-      [username, hash, nickname || username, email || '', phone || '']
+      'INSERT INTO users (username, password, nickname, email, phone, role, role_id) VALUES (?,?,?,?,?,?,?)',
+      [username, hash, nickname || username, email || '', phone || '', 'user', roleId]
     )
     res.json({ code: 200, message: '注册成功' })
   } catch (e) {
@@ -33,7 +34,6 @@ router.post('/register', async (req, res) => {
   }
 })
 
-// 登录
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body
@@ -50,8 +50,10 @@ router.post('/login', async (req, res) => {
     const valid = await bcrypt.compare(password, user.password)
     if (!valid) return res.json({ code: 400, message: '用户名或密码错误' })
 
+    const permissions = await getUserPermissions(user.role_id)
+
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
+      { id: user.id, username: user.username, role: user.role, role_id: user.role_id || 0 },
       SECRET,
       { expiresIn: '7d' }
     )
@@ -67,7 +69,9 @@ router.post('/login', async (req, res) => {
           email: user.email,
           phone: user.phone,
           avatar: user.avatar,
-          role: user.role
+          role: user.role,
+          role_id: user.role_id || 0,
+          permissions
         }
       }
     })
@@ -77,20 +81,22 @@ router.post('/login', async (req, res) => {
   }
 })
 
-// 获取个人信息
 router.get('/profile', auth, async (req, res) => {
   try {
     const [users] = await db.query(
-      'SELECT id,username,nickname,email,phone,avatar,role,created_at FROM users WHERE id=?',
+      'SELECT id,username,nickname,email,phone,avatar,role,role_id,created_at FROM users WHERE id=?',
       [req.user.id]
     )
-    res.json({ code: 200, data: users[0] || null })
+    if (!users.length) return res.json({ code: 200, data: null })
+    const user = users[0]
+    const permissions = await getUserPermissions(user.role_id)
+    user.permissions = permissions
+    res.json({ code: 200, data: user })
   } catch (e) {
     res.json({ code: 500, message: '服务器错误' })
   }
 })
 
-// 更新个人信息
 router.put('/profile', auth, async (req, res) => {
   try {
     const { nickname, email, phone, avatar } = req.body
