@@ -123,7 +123,7 @@ const statusMap: Record<OrderStatus, string> = {
   pending: '待付款', paid: '已付款', shipped: '已发货', completed: '已完成', cancelled: '已取消'
 }
 const statusType: Record<OrderStatus, string> = {
-  pending: 'warning', paid: 'primary', shipped: 'success', completed: '', cancelled: 'info'
+  pending: 'warning', paid: 'primary', shipped: 'success', completed: 'success', cancelled: 'info'
 }
 
 const list = ref<Order[]>([])
@@ -138,15 +138,17 @@ const currentOrder = ref<Order | null>(null)
 async function load(p?: number): Promise<void> {
   if (p) page.value = p
   loading.value = true
-  const { $api } = useNuxtApp()
-  const params: Record<string, unknown> = { page: page.value, pageSize: 10, _admin: 1 }
-  if (keyword.value) params.keyword = keyword.value
-  if (statusFilter.value) params.status = statusFilter.value
-  const res = await $api.get<PageResult<Order>>('/orders', params)
-  if (res.code === 200) {
-    list.value = res.data.list
-    total.value = res.data.total
-  }
+  try {
+    const { $api } = useNuxtApp()
+    const params: Record<string, unknown> = { page: page.value, pageSize: 10, _admin: 1 }
+    if (keyword.value) params.keyword = keyword.value
+    if (statusFilter.value) params.status = statusFilter.value
+    const res = await $api.get<PageResult<Order>>('/orders', params)
+    if (res.code === 200) {
+      list.value = res.data.list
+      total.value = res.data.total
+    }
+  } catch {}
   loading.value = false
 }
 

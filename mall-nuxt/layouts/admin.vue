@@ -46,21 +46,23 @@
           <NuxtLink to="/" style="color: #606266; font-size: 0.85rem">
             <ClientOnly><el-icon><HomeFilled /></el-icon></ClientOnly> 回到前台
           </NuxtLink>
-          <el-dropdown trigger="click" @command="handleCommand">
-            <span style="display: flex; align-items: center; gap: 8px; cursor: pointer">
-              <el-avatar :size="32" style="background: #c0392b">
-                {{ userStore.user?.username?.[0]?.toUpperCase() || 'A' }}
-              </el-avatar>
-              <span style="font-size: 0.9rem">{{ userStore.user?.username }}</span>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="logout">
-                  <ClientOnly><el-icon><SwitchButton /></el-icon></ClientOnly> 退出登录
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
+          <ClientOnly>
+            <el-dropdown trigger="click" @command="handleCommand">
+              <span style="display: flex; align-items: center; gap: 8px; cursor: pointer">
+                <el-avatar :size="32" style="background: #c0392b">
+                  {{ userStore.user?.username?.[0]?.toUpperCase() || 'A' }}
+                </el-avatar>
+                <span style="font-size: 0.9rem">{{ userStore.user?.username }}</span>
+              </span>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="logout">
+                    <ClientOnly><el-icon><SwitchButton /></el-icon></ClientOnly> 退出登录
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </ClientOnly>
         </div>
       </el-header>
 

@@ -31,13 +31,18 @@ export default defineNuxtRouteMiddleware((to, from) => {
   }
 
   if (requiresAdmin) {
+    let matched = false
     for (const [pathPrefix, perm] of Object.entries(ADMIN_PERMISSION_MAP)) {
       if (to.path.startsWith(pathPrefix)) {
+        matched = true
         if (!userStore.hasPermission(perm.resource, perm.action)) {
-          return navigateTo('/admin/dashboard')
+          return navigateTo('/')
         }
         break
       }
+    }
+    if (!matched && !userStore.isAdmin && !userStore.hasAnyPermission('dashboard')) {
+      return navigateTo('/')
     }
   }
 })

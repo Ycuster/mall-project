@@ -55,7 +55,7 @@ const statusMap: Record<OrderStatus, string> = {
   pending: '待付款', paid: '已付款', shipped: '已发货', completed: '已完成', cancelled: '已取消'
 }
 const statusType: Record<OrderStatus, string> = {
-  pending: 'warning', paid: 'primary', shipped: 'success', completed: '', cancelled: 'info'
+  pending: 'warning', paid: 'primary', shipped: 'success', completed: 'success', cancelled: 'info'
 }
 
 const orders = ref<Order[]>([])

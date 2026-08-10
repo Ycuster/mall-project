@@ -39,31 +39,34 @@
             </el-badge>
           </NuxtLink>
 
-          <el-dropdown v-if="userStore.isLoggedIn" trigger="click" @command="handleCommand">
-            <span class="user-trigger">
-              <el-avatar :size="32" style="background: #c0392b">
-                {{ userStore.user?.nickname?.[0] || userStore.user?.username?.[0] || 'U' }}
-              </el-avatar>
-              <span class="user-name">{{ userStore.user?.nickname || userStore.user?.username }}</span>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="orders">
-                  <DelayedRender><el-icon><Document /></el-icon></DelayedRender> 我的订单
-                </el-dropdown-item>
-                <el-dropdown-item command="profile">
-                  <DelayedRender><el-icon><User /></el-icon></DelayedRender> 个人中心
-                </el-dropdown-item>
-                <el-dropdown-item v-if="userStore.isAdmin" command="admin" divided>
-                  <DelayedRender><el-icon><Setting /></el-icon></DelayedRender> 后台管理
-                </el-dropdown-item>
-                <el-dropdown-item command="logout" divided>
-                  <DelayedRender><el-icon><SwitchButton /></el-icon></DelayedRender> 退出登录
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-
+          <template v-if="userStore.isLoggedIn">
+            <ClientOnly>
+              <el-dropdown trigger="click" @command="handleCommand">
+                <span class="user-trigger">
+                  <el-avatar :size="32" style="background: #c0392b">
+                    {{ userStore.user?.nickname?.[0] || userStore.user?.username?.[0] || 'U' }}
+                  </el-avatar>
+                  <span class="user-name">{{ userStore.user?.nickname || userStore.user?.username }}</span>
+                </span>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="orders">
+                      <DelayedRender><el-icon><Document /></el-icon></DelayedRender> 我的订单
+                    </el-dropdown-item>
+                    <el-dropdown-item command="profile">
+                      <DelayedRender><el-icon><User /></el-icon></DelayedRender> 个人中心
+                    </el-dropdown-item>
+                    <el-dropdown-item v-if="userStore.isAdmin" command="admin" divided>
+                      <DelayedRender><el-icon><Setting /></el-icon></DelayedRender> 后台管理
+                    </el-dropdown-item>
+                    <el-dropdown-item command="logout" divided>
+                      <DelayedRender><el-icon><SwitchButton /></el-icon></DelayedRender> 退出登录
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </ClientOnly>
+          </template>
           <template v-else>
             <NuxtLink to="/login">
               <el-button type="primary" round>登录</el-button>
@@ -109,7 +112,7 @@ function doSearch(): void {
 function handleCommand(cmd: string): void {
   if (cmd === 'logout') {
     userStore.logout()
-    cartStore.$reset()
+    cartStore.clear()
     navigateTo('/')
   } else if (cmd === 'admin') {
     navigateTo('/admin')

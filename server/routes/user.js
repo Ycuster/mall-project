@@ -47,15 +47,27 @@ router.put('/:id', auth, async (req, res, next) => {
   rp(req, res, next)
 }, async (req, res) => {
   try {
-    if (+req.params.id === req.user.id) {
-      const { nickname, email, phone } = req.body
-      await db.query('UPDATE users SET nickname=?, email=?, phone=? WHERE id=?',
-        [nickname || '', email || '', phone || '', req.params.id])
-      return res.json({ code: 200, message: '更新成功' })
+    const allowed = ['nickname', 'email', 'phone', 'avatar', 'role', 'role_id', 'status']
+    const updates = {}
+    for (const k of allowed) {
+      if (req.body[k] !== undefined) updates[k] = req.body[k]
     }
-    const { nickname, email, phone, role, role_id, status } = req.body
-    await db.query('UPDATE users SET nickname=?, email=?, phone=?, role=?, role_id=?, status=? WHERE id=?',
-      [nickname || '', email || '', phone || '', role || 'user', role_id || null, status ?? 1, req.params.id])
+
+    if (+req.params.id === req.user.id) {
+      delete updates.role
+      delete updates.role_id
+      delete updates.status
+    }
+
+    if (!Object.keys(updates).length) {
+      return res.json({ code: 200, message: '没有需要更新的字段' })
+    }
+
+    const sets = Object.keys(updates).map(k => `${k}=?`).join(',')
+    const values = Object.values(updates)
+    values.push(req.params.id)
+
+    await db.query(`UPDATE users SET ${sets} WHERE id=?`, values)
     res.json({ code: 200, message: '更新成功' })
   } catch (e) {
     console.error(e)

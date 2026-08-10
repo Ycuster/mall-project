@@ -2,6 +2,16 @@ const router = require('express').Router()
 const db = require('../config/db')
 const { auth, requirePermission } = require('../middleware/auth')
 
+router.get('/simple', auth, async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT id, name, display_name FROM roles ORDER BY id')
+    res.json({ code: 200, data: rows })
+  } catch (e) {
+    console.error(e)
+    res.json({ code: 500, message: '服务器错误' })
+  }
+})
+
 router.get('/permissions', auth, async (req, res, next) => {
   const rp = await requirePermission('role', 'manage')
   rp(req, res, next)

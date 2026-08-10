@@ -185,11 +185,13 @@ const formRules = {
 async function load(p?: number): Promise<void> {
   if (p) page.value = p
   loading.value = true
-  const { $api } = useNuxtApp()
-  const res = await $api.get<PageResult<Product>>('/products', {
-    page: page.value, pageSize: 10, keyword: keyword.value, _admin: 1, status: ''
-  })
-  if (res.code === 200) { list.value = res.data.list; total.value = res.data.total }
+  try {
+    const { $api } = useNuxtApp()
+    const res = await $api.get<PageResult<Product>>('/products', {
+      page: page.value, pageSize: 10, keyword: keyword.value, _admin: 1, status: ''
+    })
+    if (res.code === 200) { list.value = res.data.list; total.value = res.data.total }
+  } catch {}
   loading.value = false
 }
 
@@ -247,8 +249,10 @@ async function handleDelete(id: number): Promise<void> {
 
 onMounted(async () => {
   const { $api } = useNuxtApp()
-  const catRes = await $api.get<Category[]>('/categories/all')
-  if (catRes.code === 200) categories.value = catRes.data
+  try {
+    const catRes = await $api.get<Category[]>('/categories', { _admin: 1 })
+    if (catRes.code === 200) categories.value = catRes.data
+  } catch {}
   load(1)
 })
 </script>

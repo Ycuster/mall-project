@@ -97,9 +97,11 @@ const formRules = {
 
 async function load(): Promise<void> {
   loading.value = true
-  const { $api } = useNuxtApp()
-  const res = await $api.get<Category[]>('/categories', { _admin: 1 })
-  if (res.code === 200) list.value = res.data
+  try {
+    const { $api } = useNuxtApp()
+    const res = await $api.get<Category[]>('/categories', { _admin: 1 })
+    if (res.code === 200) list.value = res.data
+  } catch {}
   loading.value = false
 }
 

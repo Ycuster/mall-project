@@ -21,11 +21,29 @@ router.post('/register', async (req, res) => {
     if (exists.length) return res.json({ code: 400, message: '用户名已存在' })
 
     const hash = await bcrypt.hash(password, 10)
-    const [roleRows] = await db.query("SELECT id FROM roles WHERE name = 'user' LIMIT 1")
-    const roleId = roleRows.length ? roleRows[0].id : null
+    let roleId = null
+    try {
+      const [roleRows] = await db.query("SELECT id FROM roles WHERE name = 'user' LIMIT 1")
+      roleId = roleRows.length ? roleRows[0].id : null
+    } catch (e) {
+      console.warn('[REGISTER] 查询角色失败，使用默认值:', e.message)
+    }
+
+    const [cols] = await db.query('SHOW COLUMNS FROM users')
+    const colNames = cols.map(c => c.Field)
+    const fields = ['username', 'password', 'nickname']
+    const values = [username, hash, nickname || username]
+
+    if (colNames.includes('email')) { fields.push('email'); values.push(email || '') }
+    if (colNames.includes('phone')) { fields.push('phone'); values.push(phone || '') }
+    if (colNames.includes('role')) { fields.push('role'); values.push('user') }
+    if (colNames.includes('role_id')) { fields.push('role_id'); values.push(roleId) }
+    if (colNames.includes('status')) { fields.push('status'); values.push(1) }
+
+    const placeholders = fields.map(() => '?').join(',')
     await db.query(
-      'INSERT INTO users (username, password, nickname, email, phone, role, role_id) VALUES (?,?,?,?,?,?,?)',
-      [username, hash, nickname || username, email || '', phone || '', 'user', roleId]
+      `INSERT INTO users (${fields.join(',')}) VALUES (${placeholders})`,
+      values
     )
     res.json({ code: 200, message: '注册成功' })
   } catch (e) {

@@ -57,11 +57,6 @@ app.get('*', (req, res) => {
 // 初始化种子数据
 async function seed() {
   try {
-    const [[{ c }]] = await db.query('SELECT COUNT(*) as c FROM users')
-    if (c > 0) return
-
-    console.log('🌱 初始化种子数据...')
-
     await db.query(`CREATE TABLE IF NOT EXISTS roles (
       id INT PRIMARY KEY AUTO_INCREMENT,
       name VARCHAR(50) NOT NULL UNIQUE,
@@ -87,12 +82,25 @@ async function seed() {
       FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
     )`)
 
-    const [roleCols] = await db.query('SHOW COLUMNS FROM users LIKE ?', ['role_id'])
-    if (!roleCols.length) {
-      await db.query('ALTER TABLE users ADD COLUMN role_id INT DEFAULT NULL')
+    try {
+      const [roleCols] = await db.query('SHOW COLUMNS FROM users LIKE ?', ['role_id'])
+      if (!roleCols.length) {
+        await db.query('ALTER TABLE users ADD COLUMN role_id INT DEFAULT NULL')
+      }
+    } catch (e) {
+      console.warn('检查 role_id 列失败（users 表可能不存在）:', e.message)
     }
 
-    await db.query('INSERT INTO roles (name, display_name, description) VALUES ?', [[
+    try {
+      const [statusCols] = await db.query('SHOW COLUMNS FROM users LIKE ?', ['status'])
+      if (!statusCols.length) {
+        await db.query('ALTER TABLE users ADD COLUMN status TINYINT NOT NULL DEFAULT 1')
+      }
+    } catch (e) {
+      console.warn('检查 status 列失败:', e.message)
+    }
+
+    await db.query('INSERT IGNORE INTO roles (name, display_name, description) VALUES ?', [[
       ['super_admin', '超级管理员', '拥有所有权限'],
       ['product_manager', '商品管理员', '管理商品和分类'],
       ['order_manager', '订单管理员', '管理订单发货和取消'],
@@ -117,7 +125,7 @@ async function seed() {
       ['user:delete', '删除用户', 'user', 'delete'],
       ['role:manage', '管理角色权限', 'role', 'manage']
     ]
-    await db.query('INSERT INTO permissions (name, display_name, resource, action) VALUES ?', [permData])
+    await db.query('INSERT IGNORE INTO permissions (name, display_name, resource, action) VALUES ?', [permData])
 
     const [[{ id: saId }]] = await db.query("SELECT id FROM roles WHERE name='super_admin'")
     const [[{ id: pmId }]] = await db.query("SELECT id FROM roles WHERE name='product_manager'")
@@ -129,20 +137,30 @@ async function seed() {
     const permMap = {}
     for (const p of allPerms) permMap[`${p.resource}:${p.action}`] = p.id
 
-    const rpValues = []
+    const [existingRp] = await db.query('SELECT COUNT(*) as c FROM role_permissions')
+    if (existingRp[0].c === 0) {
+      const rpValues = []
+      for (const key of Object.keys(permMap)) rpValues.push([saId, permMap[key]])
+      ;['dashboard:read','product:read','product:write','product:delete','category:read','category:write','category:delete']
+        .forEach(k => rpValues.push([pmId, permMap[k]]))
+      ;['dashboard:read','order:read','order:write','order:ship','order:cancel']
+        .forEach(k => rpValues.push([omId, permMap[k]]))
+      ;['dashboard:read','product:read','category:read','order:read','user:read']
+        .forEach(k => rpValues.push([viId, permMap[k]]))
+      await db.query('INSERT INTO role_permissions (role_id, permission_id) VALUES ?', [rpValues])
+    }
 
-    for (const key of Object.keys(permMap)) rpValues.push([saId, permMap[key]])
+    try {
+      const [[adminUser]] = await db.query("SELECT id, role_id FROM users WHERE username='admin' LIMIT 1")
+      if (adminUser && !adminUser.role_id) {
+        await db.query('UPDATE users SET role_id=? WHERE id=?', [saId, adminUser.id])
+      }
+    } catch {}
 
-    ;['dashboard:read','product:read','product:write','product:delete','category:read','category:write','category:delete']
-      .forEach(k => rpValues.push([pmId, permMap[k]]))
+    const [[{ c }]] = await db.query('SELECT COUNT(*) as c FROM users')
+    if (c > 0) return
 
-    ;['dashboard:read','order:read','order:write','order:ship','order:cancel']
-      .forEach(k => rpValues.push([omId, permMap[k]]))
-
-    ;['dashboard:read','product:read','category:read','order:read','user:read']
-      .forEach(k => rpValues.push([viId, permMap[k]]))
-
-    await db.query('INSERT INTO role_permissions (role_id, permission_id) VALUES ?', [rpValues])
+    console.log('🌱 初始化种子数据...')
 
     const adminPwd = await bcrypt.hash('admin123', 10)
     const testPwd = await bcrypt.hash('test123', 10)

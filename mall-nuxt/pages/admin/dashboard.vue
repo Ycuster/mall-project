@@ -76,7 +76,7 @@ const statusMap: Record<OrderStatus, string> = {
   pending: '待付款', paid: '已付款', shipped: '已发货', completed: '已完成', cancelled: '已取消'
 }
 const statusType: Record<OrderStatus, string> = {
-  pending: 'warning', paid: 'primary', shipped: 'success', completed: '', cancelled: 'info'
+  pending: 'warning', paid: 'primary', shipped: 'success', completed: 'success', cancelled: 'info'
 }
 
 const loading = ref<boolean>(true)
@@ -94,19 +94,19 @@ const statCards = computed(() => [
 ])
 
 onMounted(async () => {
-  const { $api } = useNuxtApp()
-  const [s, rev, st, top, recent] = await Promise.all([
-    $api.get<Record<string, unknown>>('/dashboard/stats'),
-    $api.get<Array<{ date: string; revenue: number }>>('/dashboard/chart/revenue'),
-    $api.get<Array<{ status: string; count: number }>>('/dashboard/chart/status'),
-    $api.get<Array<{ id: number; name: string; sales: number; price: number }>>('/dashboard/top-products'),
-    $api.get<Array<{ id: number; order_no: string; total_amount: number; status: string; created_at: string; nickname: string; username: string }>>('/dashboard/recent-orders')
-  ])
+  try {
+    const { $api } = useNuxtApp()
+    const [s, rev, st, top, recent] = await Promise.all([
+      $api.get<Record<string, unknown>>('/dashboard/stats'),
+      $api.get<Array<{ date: string; revenue: number }>>('/dashboard/chart/revenue'),
+      $api.get<Array<{ status: string; count: number }>>('/dashboard/chart/status'),
+      $api.get<Array<{ id: number; name: string; sales: number; price: number }>>('/dashboard/top-products'),
+      $api.get<Array<{ id: number; order_no: string; total_amount: number; status: string; created_at: string; nickname: string; username: string }>>('/dashboard/recent-orders')
+    ])
 
-  if (s.code === 200) stats.value = s.data
-  if (top.code === 200) topProducts.value = top.data
-  if (recent.code === 200) recentOrders.value = recent.data
-  loading.value = false
+    if (s.code === 200) stats.value = s.data
+    if (top.code === 200) topProducts.value = top.data
+    if (recent.code === 200) recentOrders.value = recent.data
 
   await nextTick()
 
@@ -158,6 +158,7 @@ onMounted(async () => {
       }]
     })
   }
+  } catch {} finally { loading.value = false }
 })
 </script>
 

@@ -195,8 +195,19 @@ router.put('/:id/cancel', auth, async (req, res, next) => {
 })
 
 router.put('/:id/status', auth, async (req, res, next) => {
-  const rp = await requirePermission('order', 'write')
-  rp(req, res, next)
+  const { status } = req.body
+  const isAdmin = req.user.role === 'admin' || (req.user.role_id && req.user.role_id > 0)
+
+  if (isAdmin) {
+    const rp = await requirePermission('order', 'write')
+    return rp(req, res, next)
+  }
+
+  if (status === 'cancelled') {
+    return next()
+  }
+
+  return res.status(403).json({ code: 403, message: '权限不足' })
 }, async (req, res) => {
   try {
     const { status } = req.body
@@ -212,8 +223,9 @@ router.put('/:id/status', auth, async (req, res, next) => {
     if (!orders.length) return res.json({ code: 404, message: '订单不存在' })
 
     const order = orders[0]
+    const isAdmin = req.user.role === 'admin' || (req.user.role_id && req.user.role_id > 0)
 
-    if (req.user.role !== 'admin' && !req.user.role_id) {
+    if (!isAdmin) {
       if (status !== 'cancelled' || order.user_id !== req.user.id || order.status !== 'pending') {
         return res.json({ code: 403, message: '无权操作' })
       }
