@@ -36,10 +36,12 @@
 import { ref, reactive } from 'vue'
 import { useRoute } from '#app'
 import { useUserStore } from '~/stores/user'
+import { usePermissionStore } from '~/stores/permission'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const userStore = useUserStore()
+const permissionStore = usePermissionStore()
 const formRef = ref()
 const loading = ref<boolean>(false)
 
@@ -70,7 +72,7 @@ async function handleLogin(): Promise<void> {
       tokenCookie.value = res.data.token
       userCookie.value = JSON.stringify(res.data.user)
       ElMessage.success('登录成功')
-      const redirect = (route.query.redirect as string) || (res.data.user.role === 'admin' ? '/admin' : '/')
+      const redirect = (route.query.redirect as string) || permissionStore.hasRole(['super_admin', 'admin', 'operator', 'customer_service']) ? '/admin' : '/'
       await navigateTo(redirect)
     } else {
       ElMessage.error(res.message || '登录失败')

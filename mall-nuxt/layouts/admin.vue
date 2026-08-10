@@ -16,25 +16,18 @@
         text-color="rgba(255,255,255,0.65)"
         active-text-color="#fff"
       >
-        <el-menu-item index="/admin/dashboard">
-          <ClientOnly><el-icon><DataAnalysis /></el-icon></ClientOnly>
-          <template #title>数据看板</template>
-        </el-menu-item>
-        <el-menu-item index="/admin/products">
-          <ClientOnly><el-icon><Goods /></el-icon></ClientOnly>
-          <template #title>商品管理</template>
-        </el-menu-item>
-        <el-menu-item index="/admin/categories">
-          <ClientOnly><el-icon><Menu /></el-icon></ClientOnly>
-          <template #title>分类管理</template>
-        </el-menu-item>
-        <el-menu-item index="/admin/orders">
-          <ClientOnly><el-icon><Document /></el-icon></ClientOnly>
-          <template #title>订单管理</template>
-        </el-menu-item>
-        <el-menu-item index="/admin/users">
-          <ClientOnly><el-icon><User /></el-icon></ClientOnly>
-          <template #title>用户管理</template>
+        <!-- 动态菜单：基于权限渲染 -->
+        <template v-for="menu in visibleMenus" :key="menu.module">
+          <el-menu-item :index="menu.menus[0]?.route_path || ''">
+            <ClientOnly><el-icon><component :is="getModuleIcon(menu.module)" /></el-icon></ClientOnly>
+            <template #title>{{ getModuleLabel(menu.module) }}</template>
+          </el-menu-item>
+        </template>
+
+        <!-- 角色管理菜单（仅超级管理员可见） -->
+        <el-menu-item v-if="permissionStore.hasPermission('role:view')" index="/admin/roles">
+          <ClientOnly><el-icon><Lock /></el-icon></ClientOnly>
+          <template #title>角色权限</template>
         </el-menu-item>
       </el-menu>
     </el-aside>
@@ -84,20 +77,56 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from '#app'
 import { useUserStore } from '~/stores/user'
+import { usePermissionStore } from '~/stores/permission'
 
 const route = useRoute()
 const userStore = useUserStore()
+const permissionStore = usePermissionStore()
 const isCollapse = ref<boolean>(false)
+
+// 菜单图标映射
+const iconMap: Record<string, string> = {
+  dashboard: 'DataAnalysis',
+  product: 'Goods',
+  category: 'Menu',
+  order: 'Document',
+  user: 'User',
+  role: 'Lock'
+}
+
+// 菜单名称映射
+const labelMap: Record<string, string> = {
+  dashboard: '数据看板',
+  product: '商品管理',
+  category: '分类管理',
+  order: '订单管理',
+  user: '用户管理',
+  role: '角色权限'
+}
+
+const getModuleIcon = (module: string): string => iconMap[module] || 'Circle'
+const getModuleLabel = (module: string): string => labelMap[module] || module
+
+// 根据权限过滤可见菜单
+const visibleMenus = computed(() => {
+  return permissionStore.menus.filter(m => {
+    // 超级管理员看所有菜单
+    if (permissionStore.isSuperAdmin) return true
+    // 至少有一个菜单权限才显示
+    return m.menus.some(menu => permissionStore.codes.includes(menu.code))
+  })
+})
 
 const titleMap: Record<string, string> = {
   '/admin/dashboard': '数据看板',
   '/admin/products': '商品管理',
   '/admin/categories': '分类管理',
   '/admin/orders': '订单管理',
-  '/admin/users': '用户管理'
+  '/admin/users': '用户管理',
+  '/admin/roles': '角色权限'
 }
 
 const currentTitle = computed<string>(() => titleMap[route.path] || '')
@@ -108,6 +137,14 @@ function handleCommand(cmd: string): void {
     navigateTo('/login')
   }
 }
+
+onMounted(async () => {
+  if (userStore.isLoggedIn && !permissionStore.loaded) {
+    try {
+      await permissionStore.fetchPermissions()
+    } catch {}
+  }
+})
 </script>
 
 <style scoped>

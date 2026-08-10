@@ -1,18 +1,30 @@
 import { useUserStore } from '~/stores/user'
+import { useCartStore } from '~/stores/cart'
+import { usePermissionStore } from '~/stores/permission'
 
-export default defineNuxtPlugin(() => {
+export default defineNuxtPlugin(async () => {
   const userStore = useUserStore()
+  const cartStore = useCartStore()
+  const permissionStore = usePermissionStore()
 
-  const token = useCookie('mall_token').value as string
-  const userStr = useCookie('mall_user').value as string
-
-  if (token) {
-    let userData: any = null
-    if (userStr) {
-      try {
-        userData = JSON.parse(userStr)
-      } catch {}
+  if (userStore.isLoggedIn) {
+    try {
+      const { $api } = useNuxtApp()
+      const res = await $api.get<any>('/auth/profile')
+      if (res.code === 200 && res.data) {
+        userStore.setAuth(userStore.token, res.data)
+        if (res.data.permissions) {
+          permissionStore.setFromLogin(res.data.permissions)
+        }
+      }
+    } catch {
+      // Token 过期，清除状态
+      userStore.logout()
+      return
     }
-    userStore.setAuth(token, userData)
+
+    try {
+      await cartStore.fetch()
+    } catch {}
   }
 })

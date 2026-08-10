@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const db = require('../config/db')
 const { auth, SECRET } = require('../middleware/auth')
+const { getUserPermissions, getUserRoles } = require('../middleware/rbac')
 
 // 注册
 router.post('/register', async (req, res) => {
@@ -56,6 +57,10 @@ router.post('/login', async (req, res) => {
       { expiresIn: '7d' }
     )
 
+    // 获取 RBAC 权限
+    const permissions = await getUserPermissions(user.id)
+    const roles = await getUserRoles(user.id)
+
     res.json({
       code: 200,
       data: {
@@ -67,7 +72,13 @@ router.post('/login', async (req, res) => {
           email: user.email,
           phone: user.phone,
           avatar: user.avatar,
-          role: user.role
+          role: user.role,
+          roles: roles.map(r => ({ id: r.id, code: r.code, name: r.name }))
+        },
+        permissions: {
+          codes: permissions.codes,
+          modules: permissions.modules,
+          types: permissions.types
         }
       }
     })
@@ -77,14 +88,31 @@ router.post('/login', async (req, res) => {
   }
 })
 
-// 获取个人信息
+// 获取个人信息（含权限）
 router.get('/profile', auth, async (req, res) => {
   try {
     const [users] = await db.query(
       'SELECT id,username,nickname,email,phone,avatar,role,created_at FROM users WHERE id=?',
       [req.user.id]
     )
-    res.json({ code: 200, data: users[0] || null })
+    const user = users[0] || null
+    if (!user) return res.json({ code: 200, data: null })
+
+    const permissions = await getUserPermissions(req.user.id)
+    const roles = await getUserRoles(req.user.id)
+
+    res.json({
+      code: 200,
+      data: {
+        ...user,
+        roles: roles.map(r => ({ id: r.id, code: r.code, name: r.name })),
+        permissions: {
+          codes: permissions.codes,
+          modules: permissions.modules,
+          types: permissions.types
+        }
+      }
+    })
   } catch (e) {
     res.json({ code: 500, message: '服务器错误' })
   }

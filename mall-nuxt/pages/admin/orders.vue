@@ -46,6 +46,7 @@
         <template #default="{ row }">
           <el-button type="primary" text size="small" @click="viewDetail(row)">详情</el-button>
           <el-button
+            v-permission="'order:ship'"
             v-if="row.status === 'paid'"
             type="success"
             text
@@ -56,7 +57,7 @@
           </el-button>
           <el-popconfirm v-if="row.status === 'pending' || row.status === 'paid'" title="确定取消订单？" @confirm="cancelOrder(row.id)">
             <template #reference>
-              <el-button type="danger" text size="small">取消</el-button>
+              <el-button v-permission="'order:cancel'" type="danger" text size="small">取消</el-button>
             </template>
           </el-popconfirm>
         </template>

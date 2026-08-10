@@ -4,6 +4,7 @@ const path = require('path')
 const fs = require('fs')
 const bcrypt = require('bcryptjs')
 const db = require('./config/db')
+const { initRbac } = require('./init-rbac')
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -12,6 +13,7 @@ const PORT = process.env.PORT || 3001
 app.use(cors())
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
+app.use(require('./middleware/rbac').attachPermissions())
 
 // 静态文件
 const uploadsDir = path.join(__dirname, 'uploads')
@@ -26,6 +28,7 @@ if (fs.existsSync(distDir)) {
 
 // API 路由
 app.use('/api/auth', require('./routes/auth'))
+app.use('/api/rbac', require('./routes/rbac'))
 app.use('/api/categories', require('./routes/category'))
 app.use('/api/products', require('./routes/product'))
 app.use('/api/cart', require('./routes/cart'))
@@ -127,5 +130,6 @@ async function seed() {
 app.listen(PORT, async () => {
   console.log(`\n🚀 服务已启动: http://localhost:${PORT}`)
   console.log(`📡 API 地址: http://localhost:${PORT}/api`)
+  await initRbac()
   await seed()
 })

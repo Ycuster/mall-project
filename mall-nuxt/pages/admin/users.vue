@@ -38,12 +38,13 @@
         </template>
       </el-table-column>
       <el-table-column label="注册时间" prop="created_at" width="170" />
-      <el-table-column label="操作" width="160" fixed="right">
+      <el-table-column label="操作" width="200" fixed="right">
         <template #default="{ row }">
-          <el-button type="primary" text size="small" @click="openDialog(row)">编辑</el-button>
+          <el-button v-permission="'user:edit'" type="primary" text size="small" @click="openDialog(row)">编辑</el-button>
+          <el-button v-permission="'user:role'" type="warning" text size="small" @click="openRoleDialog(row)">角色</el-button>
           <el-popconfirm title="确定删除？" @confirm="handleDelete(row.id)">
             <template #reference>
-              <el-button type="danger" text size="small">删除</el-button>
+              <el-button v-permission="'user:delete'" type="danger" text size="small">删除</el-button>
             </template>
           </el-popconfirm>
         </template>
@@ -89,6 +90,24 @@
         <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 角色分配弹窗 -->
+    <el-dialog v-model="roleDialogVisible" title="分配角色" width="480px" destroy-on-close>
+      <div v-if="currentUser" style="margin-bottom: 16px">
+        为用户 <strong>{{ currentUser.username }}</strong> 选择角色
+      </div>
+      <div v-loading="roleLoading">
+        <el-checkbox-group v-model="selectedRoleIds">
+          <el-checkbox v-for="role in allRoles" :key="role.id" :value="role.id">
+            {{ role.name }} <span style="color: #909399; font-size: 0.8rem">({{ role.code }})</span>
+          </el-checkbox>
+        </el-checkbox-group>
+      </div>
+      <template #footer>
+        <el-button @click="roleDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="roleSaving" @click="handleSaveRoles">保存</el-button>
+      </template>
+    </el-dialog>
   </el-card>
 </template>
 
@@ -109,6 +128,12 @@ interface UserForm {
   status: number
 }
 
+interface RoleOption {
+  id: number
+  name: string
+  code: string
+}
+
 const list = ref<User[]>([])
 const total = ref<number>(0)
 const page = ref<number>(1)
@@ -118,6 +143,14 @@ const dialogVisible = ref<boolean>(false)
 const editId = ref<number | null>(null)
 const saving = ref<boolean>(false)
 const formRef = ref()
+
+// 角色分配相关
+const roleDialogVisible = ref<boolean>(false)
+const roleLoading = ref<boolean>(false)
+const roleSaving = ref<boolean>(false)
+const currentUser = ref<User | null>(null)
+const allRoles = ref<RoleOption[]>([])
+const selectedRoleIds = ref<number[]>([])
 
 const form = reactive<UserForm>({
   username: '', nickname: '', email: '', phone: '', role: 'user', status: 1
@@ -191,6 +224,47 @@ async function toggleStatus(id: number, status: number): Promise<void> {
   if (res.code !== 200) {
     ElMessage.error(res.message || '更新失败')
   }
+}
+
+async function openRoleDialog(row: User): Promise<void> {
+  currentUser.value = row
+  roleLoading.value = true
+  selectedRoleIds.value = []
+
+  const { $api } = useNuxtApp()
+  // 加载所有角色
+  const roleRes = await $api.get<any>('/rbac/roles', { params: { pageSize: 100 } })
+  if (roleRes.code === 200) {
+    allRoles.value = roleRes.data.list.map((r: { id: number; name: string; code: string }) => ({
+      id: r.id, name: r.name, code: r.code
+    }))
+  }
+
+  // 获取用户当前角色
+  const userRoleRes = await $api.get<any>(`/rbac/users/${row.id}/roles`)
+  if (userRoleRes.code === 200) {
+    selectedRoleIds.value = userRoleRes.data.map((r: { id: number }) => r.id)
+  }
+
+  roleLoading.value = false
+  roleDialogVisible.value = true
+}
+
+async function handleSaveRoles(): Promise<void> {
+  if (!currentUser.value) return
+  roleSaving.value = true
+  const { $api } = useNuxtApp()
+  const res = await $api.put(`/rbac/users/${currentUser.value.id}/roles`, {
+    role_ids: selectedRoleIds.value
+  })
+  if (res.code === 200) {
+    ElMessage.success('角色分配成功')
+    roleDialogVisible.value = false
+    await load()
+  } else {
+    ElMessage.error(res.message || '操作失败')
+  }
+  roleSaving.value = false
 }
 
 onMounted(() => load())

@@ -6,7 +6,7 @@
         <div style="display: flex; gap: 10px">
           <el-input v-model="keyword" placeholder="搜索商品..." clearable style="width: 200px"
             @keydown.enter="load(1)" @clear="load(1)" />
-          <el-button type="primary" @click="openDialog()">
+          <el-button v-permission="'product:create'" type="primary" @click="openDialog()">
             <ClientOnly><el-icon><Plus /></el-icon></ClientOnly> 添加商品
           </el-button>
         </div>
@@ -41,10 +41,10 @@
       </el-table-column>
       <el-table-column label="操作" width="160" fixed="right">
         <template #default="{ row }">
-          <el-button type="primary" text size="small" @click="openDialog(row)">编辑</el-button>
+          <el-button v-permission="'product:edit'" type="primary" text size="small" @click="openDialog(row)">编辑</el-button>
           <el-popconfirm title="确定删除？" @confirm="handleDelete(row.id)">
             <template #reference>
-              <el-button type="danger" text size="small">删除</el-button>
+              <el-button v-permission="'product:delete'" type="danger" text size="small">删除</el-button>
             </template>
           </el-popconfirm>
         </template>

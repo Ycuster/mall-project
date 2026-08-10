@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { User, AuthResponse, LoginForm } from '~/types/user'
 import type { ApiResponse } from '~/types/api'
+import { usePermissionStore } from './permission'
 
 export const useUserStore = defineStore('user', () => {
   const token = ref<string>('')
@@ -20,22 +21,30 @@ export const useUserStore = defineStore('user', () => {
     user.value = null
     useCookie('mall_token').value = ''
     useCookie('mall_user').value = ''
+    usePermissionStore().clear()
   }
 
   async function fetchProfile(): Promise<ApiResponse<User>> {
     const { $api } = useNuxtApp()
-    const res = await $api.get<User>('/auth/profile')
-    if (res.code === 200) {
-      user.value = res.data
+    const res = await $api.get<any>('/auth/profile')
+    if (res.code === 200 && res.data) {
+      const { permissions, ...userData } = res.data
+      user.value = userData
+      if (permissions) {
+        usePermissionStore().setFromLogin(permissions)
+      }
     }
     return res
   }
 
   async function login(form: LoginForm): Promise<ApiResponse<AuthResponse>> {
     const { $api } = useNuxtApp()
-    const res = await $api.post<AuthResponse>('/auth/login', form)
+    const res = await $api.post<any>('/auth/login', form)
     if (res.code === 200) {
       setAuth(res.data.token, res.data.user)
+      if (res.data.permissions) {
+        usePermissionStore().setFromLogin(res.data.permissions)
+      }
     }
     return res
   }
