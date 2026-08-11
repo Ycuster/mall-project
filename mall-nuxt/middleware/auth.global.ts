@@ -41,8 +41,10 @@ export default defineNuxtRouteMiddleware((to, from) => {
         break
       }
     }
-    if (!matched && !userStore.isAdmin && !userStore.hasAnyPermission('dashboard')) {
-      return navigateTo('/')
+    if (!matched) {
+      if (!userStore.hasAdminAccess()) {
+        return navigateTo('/')
+      }
     }
   }
 })

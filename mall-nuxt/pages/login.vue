@@ -70,7 +70,8 @@ async function handleLogin(): Promise<void> {
       tokenCookie.value = res.data.token
       userCookie.value = JSON.stringify(res.data.user)
       ElMessage.success('登录成功')
-      const redirect = (route.query.redirect as string) || (res.data.user.role === 'admin' ? '/admin' : '/')
+      const hasAdmin = res.data.user.role === 'admin' || res.data.user.role_id
+      const redirect = (route.query.redirect as string) || (hasAdmin ? '/admin' : '/')
       await navigateTo(redirect)
     } else {
       ElMessage.error(res.message || '登录失败')

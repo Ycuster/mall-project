@@ -8,7 +8,13 @@ export const useUserStore = defineStore('user', () => {
   const user = ref<User | null>(null)
 
   const isLoggedIn = computed<boolean>(() => !!token.value)
-  const isAdmin = computed<boolean>(() => user.value?.role === 'admin')
+  const isAdmin = computed<boolean>(() => {
+    if (user.value?.role === 'admin') return true
+    if (user.value?.role_id) return true
+    return false
+  })
+
+  const ADMIN_RESOURCES = ['dashboard', 'product', 'category', 'order', 'user', 'role']
 
   function hasPermission(resource: string, action: string): boolean {
     if (user.value?.role === 'admin' && !user.value?.role_id) return true
@@ -18,6 +24,11 @@ export const useUserStore = defineStore('user', () => {
   function hasAnyPermission(resource: string): boolean {
     if (user.value?.role === 'admin' && !user.value?.role_id) return true
     return user.value?.permissions?.some(p => p.resource === resource) ?? false
+  }
+
+  function hasAdminAccess(): boolean {
+    if (user.value?.role === 'admin' || user.value?.role_id) return true
+    return ADMIN_RESOURCES.some(r => hasAnyPermission(r))
   }
 
   function setAuth(t: string, u: User | null): void {
@@ -50,5 +61,5 @@ export const useUserStore = defineStore('user', () => {
     return res
   }
 
-  return { token, user, isLoggedIn, isAdmin, hasPermission, hasAnyPermission, setAuth, logout, fetchProfile, login }
+  return { token, user, isLoggedIn, isAdmin, hasPermission, hasAnyPermission, hasAdminAccess, setAuth, logout, fetchProfile, login }
 })

@@ -209,7 +209,7 @@ function getRoleTagType(row: User): string {
 function handleRoleChange(roleId: number): void {
   const r = roles.value.find(r => r.id === roleId)
   if (r) {
-    form.role = r.name === 'super_admin' ? 'admin' : 'user'
+    form.role = r.name !== 'user' ? 'admin' : 'user'
   } else {
     form.role = 'user'
     form.role_id = 0
@@ -286,7 +286,7 @@ async function handleRoleSave(): Promise<void> {
     const { $api } = useNuxtApp()
     const r = roles.value.find(r => r.id === roleForm.role_id)
     const res = await $api.put(`/users/${currentUser.value.id}`, {
-      role: r ? (r.name === 'super_admin' ? 'admin' : 'user') : 'user',
+      role: r ? (r.name !== 'user' ? 'admin' : 'user') : 'user',
       role_id: roleForm.role_id || null
     })
     if (res.code === 200) {

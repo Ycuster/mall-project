@@ -56,7 +56,7 @@
                     <el-dropdown-item command="profile">
                       <DelayedRender><el-icon><User /></el-icon></DelayedRender> 个人中心
                     </el-dropdown-item>
-                    <el-dropdown-item v-if="userStore.isAdmin" command="admin" divided>
+                    <el-dropdown-item v-if="userStore.hasAdminAccess()" command="admin" divided>
                       <DelayedRender><el-icon><Setting /></el-icon></DelayedRender> 后台管理
                     </el-dropdown-item>
                     <el-dropdown-item command="logout" divided>

@@ -19,12 +19,22 @@ onMounted(() => {
     navigateTo('/login?redirect=/admin')
     return
   }
-  if (!userStore.isAdmin) {
+  if (!userStore.hasAdminAccess()) {
     ElMessage.error('无权限访问管理后台')
     navigateTo('/')
     return
   }
-  navigateTo('/admin/dashboard')
+  const firstMenu = ['dashboard', 'order', 'product', 'category', 'user', 'role']
+    .find(r => userStore.hasAnyPermission(r))
+  const pathMap: Record<string, string> = {
+    dashboard: '/admin/dashboard',
+    order: '/admin/orders',
+    product: '/admin/products',
+    category: '/admin/categories',
+    user: '/admin/users',
+    role: '/admin/roles'
+  }
+  navigateTo(pathMap[firstMenu || 'dashboard'])
 })
 </script>
 
